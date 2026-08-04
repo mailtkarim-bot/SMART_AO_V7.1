@@ -1,0 +1,157 @@
+# =============================================================================
+# SMART_AO V7 - Docker Compose Configuration
+# =============================================================================
+# Orchestration complète : Application + PostgreSQL + Qdrant
+# Auteur: NOOR - Architecte Principal
+# Version: 0.1.0
+# Date: 04/08/2026
+# 
+# Usage:
+#   docker-compose up -d          # Démarrer tous les services
+#   docker-compose down           # Arrêter tous les services
+#   docker-compose logs -f        # Voir les logs
+#   docker-compose ps             # Voir le statut
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # =========================================================================
+  # PostgreSQL - Base de données principale
+  # =========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: smart_ao_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-smart_ao}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-your_secure_password_change_me}
+      POSTGRES_DB: ${DB_NAME:-smart_ao_v7}
+      # Optimisations pour la production
+      POSTGRES_INITDB_ARGS: "--data-checksums --encoding=UTF8 --locale=C"
+      # Configuration mémoire (50% de 16GB pour PG)
+      POSTGRES_MEMORY_LIMIT: "4GB"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Monter les migrations pour exécution automatique au premier démarrage
+      - ./app/alembic:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-smart_ao} -d ${DB_NAME:-smart_ao_v7}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - smart_ao_network
+    # Persistance des données
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # =========================================================================
+  # Qdrant - Moteur de recherche vectorielle
+  # =========================================================================
+  qdrant:
+    image: qdrant/qdrant:v1.8.0
+    container_name: smart_ao_qdrant
+    restart: unless-stopped
+    environment:
+      # Configuration pour single node (pas de clustering en V1)
+      QDRANT__CLUSTER__ENABLED: "false"
+      # Sauvegarde toutes les 60 secondes
+      QDRANT__PERSISTENCE__SAVE_INTERVAL_SEC: "60"
+      QDRANT__PERSISTENCE__SNAPSHOT_INTERVAL_SEC: "300"
+      # Limite de mémoire (4GB sur 16GB total)
+      QDRANT__MEMORY__MAP_SIZE: "4294967296"  # 4GB
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"     # HTTP API
+      - "${QDRANT_GRPC_PORT:-6334}:6334" # gRPC API
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:6333"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - smart_ao_network
+
+  # =========================================================================
+  # Application SMART_AO V7
+  # =========================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smart_ao_app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    environment:
+      # Configuration PostgreSQL
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-smart_ao_v7}
+      DB_USER: ${DB_USER:-smart_ao}
+      DB_PASSWORD: ${DB_PASSWORD:-your_secure_password_change_me}
+      
+      # Configuration Qdrant
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      
+      # Configuration Application
+      APP_PORT: ${APP_PORT:-8000}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      
+      # Configuration performance (pour 16GB RAM)
+      MAX_PARALLEL_AGENTS: "6"
+      WORKFLOW_TIMEOUT: "3600"
+    volumes:
+      # Monter le code source en lecture seule pour développement
+      - ./app:/app/app:ro
+      - ./scripts:/app/scripts:ro
+      # Persistance des logs (optionnel)
+      - app_logs:/app/logs
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health', timeout=5).raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - smart_ao_network
+    # Script d'entrée : attendre que PG et Qdrant soient prêts
+    entrypoint: ["/app/scripts/wait_for_services.sh"]
+    command: ["python", "app/main.py"]
+
+# =============================================================================
+# VOLUMES - Persistance des données
+# =============================================================================
+
+volumes:
+  postgres_data:
+    driver: local
+    name: smart_ao_postgres_data
+  qdrant_data:
+    driver: local
+    name: smart_ao_qdrant_data
+  app_logs:
+    driver: local
+    name: smart_ao_app_logs
+
+# =============================================================================
+# NETWORKS - Isolation réseau
+# =============================================================================
+
+networks:
+  smart_ao_network:
+    driver: bridge
+    name: smart_ao_network

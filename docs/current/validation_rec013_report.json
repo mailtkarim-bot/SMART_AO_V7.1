@@ -1,0 +1,141 @@
+{
+  "name": "REC-013 - Validation Production Compl\u00e8te",
+  "start_time": "2026-08-04T23:18:10.755207",
+  "end_time": "2026-08-04T23:18:11.819339",
+  "total": 11,
+  "passed": 8,
+  "failed": 3,
+  "success_rate": 72.72727272727273,
+  "results": [
+    {
+      "name": "Project Structure",
+      "passed": true,
+      "message": "All 20 critical paths exist",
+      "details": {
+        "checked_paths": 20
+      },
+      "timestamp": "2026-08-04T23:18:10.755486"
+    },
+    {
+      "name": "Core Imports",
+      "passed": true,
+      "message": "All core modules imported successfully",
+      "details": {
+        "database": "OK",
+        "mission": "OK",
+        "workflow_engine": "OK",
+        "event_bus": "OK",
+        "agent_runtime": "OK",
+        "base_agent": "OK"
+      },
+      "timestamp": "2026-08-04T23:18:11.110161"
+    },
+    {
+      "name": "MissionStatus Alignment",
+      "passed": true,
+      "message": "Workflow and DB models aligned (9 statuses)",
+      "details": {
+        "statuses": [
+          "AGENT_RUNNING",
+          "CLASSIFYING",
+          "COMPILING",
+          "CREATED",
+          "DONE",
+          "EXTRACTING",
+          "FAILED",
+          "PARSING",
+          "REPORTING"
+        ]
+      },
+      "timestamp": "2026-08-04T23:18:11.120219"
+    },
+    {
+      "name": "Agents Registration",
+      "passed": true,
+      "message": "30 agents registered",
+      "details": {
+        "total_agents": 30,
+        "total_capabilities": 115,
+        "agents": [
+          "Alloti Guardian",
+          "Assurance Agent",
+          "Avenant Tracker",
+          "BIM Agent",
+          "BT Index Tracker",
+          "..."
+        ]
+      },
+      "timestamp": "2026-08-04T23:18:11.126090"
+    },
+    {
+      "name": "WorkflowEngine Initialization",
+      "passed": true,
+      "message": "WorkflowEngine instantiated successfully",
+      "details": {
+        "max_parallel": 6
+      },
+      "timestamp": "2026-08-04T23:18:11.126105"
+    },
+    {
+      "name": "EventBus",
+      "passed": true,
+      "message": "EventBus and Event model working",
+      "details": {
+        "event_type": "TestEvent",
+        "mission_id": "test-mission"
+      },
+      "timestamp": "2026-08-04T23:18:11.126683"
+    },
+    {
+      "name": "Engines Discovery",
+      "passed": true,
+      "message": "All 10 engines imported successfully",
+      "details": {
+        "engines": [
+          "workflow_engine",
+          "agent_runtime",
+          "event_bus",
+          "math_engine",
+          "knowledge_engine",
+          "document_engine",
+          "security_engine",
+          "notification_engine",
+          "api_gateway",
+          "ui_engine"
+        ]
+      },
+      "timestamp": "2026-08-04T23:18:11.127546"
+    },
+    {
+      "name": "check_go_nogo.sh",
+      "passed": true,
+      "message": "All checks passed (27/27)",
+      "details": {
+        "passed": 27,
+        "total": 27
+      },
+      "timestamp": "2026-08-04T23:18:11.414898"
+    },
+    {
+      "name": "pip install .",
+      "passed": false,
+      "message": "Validation failed: [Errno 2] No such file or directory: 'python'",
+      "details": {},
+      "timestamp": "2026-08-04T23:18:11.818227"
+    },
+    {
+      "name": "run_test.py",
+      "passed": false,
+      "message": "Validation failed: [Errno 2] No such file or directory: 'python'",
+      "details": {},
+      "timestamp": "2026-08-04T23:18:11.818802"
+    },
+    {
+      "name": "pytest Tests",
+      "passed": false,
+      "message": "Test execution failed: [Errno 2] No such file or directory: 'python'",
+      "details": {},
+      "timestamp": "2026-08-04T23:18:11.819294"
+    }
+  ]
+}
