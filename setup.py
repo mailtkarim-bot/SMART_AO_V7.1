@@ -11,6 +11,7 @@ setup(
     install_requires=[
         "pydantic>=2.0.0",
         "asyncpg>=0.29.0",
+        "psycopg2-binary>=2.9.9",
         "python-dotenv>=1.0.0",
         "pymupdf>=1.23.0",
         "pdfplumber>=0.10.0",
@@ -26,6 +27,8 @@ setup(
         # Security & Auth (V7)
         "pyjwt>=2.8.0",
         "argon2-cffi>=23.1.0",
+        # Database migrations
+        "alembic>=1.13.0",
         # OCR (V7) - Optional (heavy dependencies)
         # "docling[all]>=0.20.0",
     ],

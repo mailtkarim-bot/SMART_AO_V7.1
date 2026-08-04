@@ -9,6 +9,12 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+# Alembic revision metadata
+revision = "0017"
+down_revision = "0016"
+branch_labels = None
+depends_on = None
+
 # =============================================================================
 # UPGRADE
 # =============================================================================

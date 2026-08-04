@@ -101,6 +101,20 @@ check_qdrant() {
     log_info "✅ Qdrant est prêt"
 }
 
+run_migrations() {
+    log_info "Exécution des migrations Alembic..."
+    
+    if command -v alembic &> /dev/null; then
+        cd /app
+        alembic -c alembic.ini upgrade head 2>&1 | while read -r line; do
+            log_info "$line"
+        done
+        log_info "✅ Migrations Alembic terminées"
+    else
+        log_info "⚠️  Alembic non installé,skip des migrations"
+    fi
+}
+
 # =============================================================================
 # EXÉCUTION
 # =============================================================================
@@ -114,7 +128,11 @@ check_postgres
 # Vérifier Qdrant
 check_qdrant
 
+# Exécuter les migrations de base de données
+run_migrations
+
 log_info "✅ Tous les services sont prêts !"
+log_info "✅ Migrations exécutées !"
 log_info "Démarrage de la commande principale..."
 
 # Exécuter la commande principale (passée en arguments)

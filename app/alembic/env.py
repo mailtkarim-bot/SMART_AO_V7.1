@@ -22,6 +22,8 @@ from app.core.database import Base, DATABASE_URL
 # Import models to ensure they're registered with Base.metadata
 from app.models.mission import Mission, MissionStep  # noqa: F401
 from app.models.events import Event, MissionEvent  # noqa: F401
+from app.models.project import Project  # noqa: F401
+from app.models.vault_core import VaultDocument, DocumentChunk  # noqa: F401
 
 # This is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

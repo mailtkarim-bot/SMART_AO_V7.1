@@ -8,6 +8,12 @@ Source: ARCHITECTURE_V7_ENGINE.md §4.4
 from alembic import op
 import sqlalchemy as sa
 
+# Alembic revision metadata
+revision = "0018"
+down_revision = "0017"
+branch_labels = None
+depends_on = None
+
 # =============================================================================
 # UPGRADE
 # =============================================================================

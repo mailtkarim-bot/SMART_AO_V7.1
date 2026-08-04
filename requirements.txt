@@ -4,6 +4,7 @@
 # Core
 pydantic>=2.0.0
 asyncpg>=0.29.0
+psycopg2-binary>=2.9.9
 python-dotenv>=1.0.0
 
 # Document Engine (V7)
@@ -29,6 +30,9 @@ argon2-cffi>=23.1.0
 
 # OCR (V7) - Optional (heavy dependencies)
 # docling[all]>=0.20.0
+
+# Database migrations
+alembic>=1.13.0
 
 # Dev
 pytest>=7.4.0
