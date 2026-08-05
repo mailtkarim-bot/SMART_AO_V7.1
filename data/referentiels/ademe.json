@@ -1,0 +1,6 @@
+{
+  "description": "Données ADEME",
+  "emissions": {
+    "beton": 250
+  }
+}

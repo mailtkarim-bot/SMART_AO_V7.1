@@ -1,0 +1,8 @@
+{
+  "description": "Coefficients site",
+  "zones": {
+    "zone_1": {
+      "coeff": 1.0
+    }
+  }
+}

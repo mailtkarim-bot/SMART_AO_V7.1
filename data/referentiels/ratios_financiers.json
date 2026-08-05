@@ -1,0 +1,6 @@
+{
+  "description": "Ratios financiers",
+  "rentabilite": {
+    "min": 0.05
+  }
+}

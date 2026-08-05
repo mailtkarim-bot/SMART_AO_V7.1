@@ -1,0 +1,6 @@
+{
+  "description": "Météo France",
+  "pluie": {
+    "paris": 600
+  }
+}

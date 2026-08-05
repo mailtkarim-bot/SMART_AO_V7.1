@@ -1,0 +1,8 @@
+{
+  "description": "Seuils EPlusC",
+  "seuils": {
+    "cee": {
+      "min": 1000
+    }
+  }
+}

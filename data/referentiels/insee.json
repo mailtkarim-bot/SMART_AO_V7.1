@@ -1,0 +1,6 @@
+{
+  "description": "Données INSEE",
+  "taux_tva": {
+    "standard": 0.2
+  }
+}
