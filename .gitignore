@@ -1,149 +1,68 @@
-# SMART_AO V7 Engine OS - .gitignore
-# =====================================
-
-# Byte-compiled / optimized / DLL files
+```
+# Compiled and build artifacts
+*.pyc
 __pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
+*.o
+*.obj
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+build/
+target/
 
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-
-# Translations
-*.mo
-*.pot
-
-# Environments
-.env
-.venv
-env/
+# Dependencies
+.venv/
 venv/
-ENV/
-env.bak/
-venv.bak/
+node_modules/
+.mypy_cache/
+.pytest_cache/
+.gradle/
 
-# IDE
-.idea/
-.vscode/
+# Logs and temp files
+*.log
+*.tmp
 *.swp
 *.swo
-*~
 
-# OS
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-logs/
-
-# Local configuration
-.env.local
-.env.*.local
-
-# Database
-*.sqlite3
-*.db
-
-# Docker
-.docker/
-
-# Test files
-*.pytest_cache/
-.mypy_cache/
-
-# PyCharm
-.idea/
-
-# Jupyter
-.ipynb_checkpoints/
-
-# Python specific
-*.pyo
-*.pyd
-*.pyc
-
-# Virtual environments
-venv/
-ENV/
+# Coverage
+coverage/
+htmlcov/
+.coverage
 
 # Compressed files
 *.zip
+*.gz
 *.tar
-*.tar.gz
+*.tgz
+*.bz2
+*.xz
+*.7z
 *.rar
-
-# Temporary files
-*.tmp
-*.temp
-*~
-
-# System files
-.DS_Store
-Thumbs.db
-
-# Node.js (if applicable)
-node_modules/
-
-# Build artifacts
-build/
-dist/
-
-# Local env files
-.env
-.env.example
-
-# Python cache
-__pycache__/
-.pytest_cache/
-.mypy_cache/
-
-# IDE specific
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS specific
-.DS_Store
-Thumbs.db
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+```
