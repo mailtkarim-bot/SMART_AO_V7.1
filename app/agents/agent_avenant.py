@@ -1,4 +1,15 @@
 """
+SMART_AO V7 - agent_avenant.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Avenant Tracker Agent
 Source: ARCHITECTURE_V7_ENGINE.md §2 + ADR-044 + RAPPORT (1).md §7.22
 
@@ -34,27 +45,38 @@ class AvenantTrackerAgent(BaseAgent):
     async def execute(self, input: AgentInput) -> AgentOutput:
         chunks = input.dce_chunks
         findings = []
+        financial_data = {}
         
         avenants = input.context.get("avenants", [])
         
         if avenants:
-            for avenant in avenants:
+            for idx, avenant in enumerate(avenants):
                 impact_financier = avenant.get("impact_financier", 0)
+                
+                # Stocker les données financières
+                if impact_financier != 0:
+                    financial_data[f"avenant_{idx}"] = {
+                        "description": avenant.get("description", ""),
+                        "impact_financier": impact_financier,
+                        "type": "AUGMENTATION" if impact_financier > 0 else "REDUCTION"
+                    }
+                
+                # Findings qualitatifs UNIQUEMENT
                 if impact_financier > 0:
                     findings.append({
                         "type": "AVENANT_AUGMENTATION",
                         "niveau": "ELEVE",
                         "description": avenant.get("description", ""),
-                        "montant": f"{impact_financier:.2f} EUR",
-                        "recommandation": "Évaluer impact sur marge"
+                        "details": "Impact financier positif detecte (voir financial_data)",
+                        "recommandation": "Evaluer impact sur resultats"
                     })
                 elif impact_financier < 0:
                     findings.append({
                         "type": "AVENANT_REDUCTION",
                         "niveau": "INFO",
                         "description": avenant.get("description", ""),
-                        "montant": f"{abs(impact_financier):.2f} EUR",
-                        "recommandation": "Opportunité à saisir"
+                        "details": "Impact financier negatif detecte (voir financial_data)",
+                        "recommandation": "Opportunite a saisir"
                     })
         
         avenant_keywords = ["avenant", "modification", "contrat", "supplément", "réduction"]
@@ -83,6 +105,7 @@ class AvenantTrackerAgent(BaseAgent):
             confidence=0.90,
             status="SUCCESS",
             findings=findings,
+            financial_data=financial_data if financial_data else None,
             source_pages=[1, 5, 10],
             execution_time_ms=0
         )

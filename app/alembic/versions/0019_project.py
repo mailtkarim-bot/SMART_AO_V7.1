@@ -1,5 +1,16 @@
 """
 SMART_AO V7 - 0019_project.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
+SMART_AO V7 - 0019_project.py
 =========================
 Migration for Project model
 Source: ARCHITECTURE_V7_ENGINE.md §4.2
@@ -32,10 +43,10 @@ def upgrade():
         sa.Column('location', sa.String(length=512), nullable=True),
         sa.Column('budget', sa.Float(), nullable=True),
         sa.Column('status', sa.String(length=64), nullable=False, server_default='active'),
-        sa.Column('start_date', sa.DateTime(), nullable=True),
-        sa.Column('end_date', sa.DateTime(), nullable=True),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now(), onupdate=sa.func.now()),
+        sa.Column('start_date', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('end_date', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now(), onupdate=sa.func.now()),
         sa.Column('extra_metadata', sa.JSON(), nullable=True, default={}),
         
         # Constraints

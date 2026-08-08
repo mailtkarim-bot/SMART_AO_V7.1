@@ -1,13 +1,24 @@
 """
+SMART_AO V7 - vault_core.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Vault Core Model
 ==============================
 PostgreSQL Vault model for document storage and semantic search
 Source: ARCHITECTURE_V7_ENGINE.md §4.3
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
-from sqlalchemy import Column, String, Text, DateTime, Integer, JSON, Boolean, Float, UniqueConstraint
+from sqlalchemy import Column, String, Text, DateTime, Integer, JSON, Boolean, Float, UniqueConstraint, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ARRAY
 
@@ -44,8 +55,8 @@ class VaultDocument(Base):
     embedding = Column(ARRAY(Float), nullable=True)
     extra_metadata = Column(JSON, default={}, nullable=True)
     status = Column(String(64), default="uploaded", nullable=False)
-    processed_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    processed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     
     # Relationships
     chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")
@@ -71,7 +82,7 @@ class DocumentChunk(Base):
     __tablename__ = "document_chunks"
     
     id = Column(Integer, primary_key=True, index=True)
-    document_id = Column(Integer, index=True, nullable=False)
+    document_id = Column(Integer, ForeignKey("vault_documents.id"), index=True, nullable=False)
     chunk_index = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
     embedding = Column(ARRAY(Float), nullable=True)

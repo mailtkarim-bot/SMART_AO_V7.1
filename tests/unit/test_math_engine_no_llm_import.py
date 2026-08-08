@@ -1,4 +1,15 @@
 """
+SMART_AO V7 - test_math_engine_no_llm_import.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Test ZERO LLM Import (Gate Bloquant Build 4)
 """
 import sys

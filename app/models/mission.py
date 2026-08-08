@@ -1,14 +1,25 @@
 """
+SMART_AO V7 - mission.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Mission Model
 ==========================
 PostgreSQL Mission model with steps tracking
 Source: ARCHITECTURE_V7_ENGINE.md §4.1
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
-from sqlalchemy import Column, String, Text, DateTime, Integer, Float, JSON, UniqueConstraint
+from sqlalchemy import Column, String, Text, DateTime, Integer, Float, JSON, UniqueConstraint, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy import Enum as SQLEnum
 
@@ -22,6 +33,7 @@ from app.core.database import Base
 
 class MissionStatus(str, Enum):
     """Status of a mission - SSoT V7 Workflow Engine"""
+    PENDING = "PENDING"
     CREATED = "CREATED"
     PARSING = "PARSING"
     EXTRACTING = "EXTRACTING"
@@ -38,6 +50,7 @@ class MissionStepStatus(str, Enum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     DONE = "DONE"
+    COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     SKIPPED = "SKIPPED"
 
@@ -72,14 +85,14 @@ class Mission(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     status = Column(SQLEnum(MissionStatus), default=MissionStatus.CREATED, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
     total_steps = Column(Integer, default=0, nullable=False)
     completed_steps = Column(Integer, default=0, nullable=False)
     error_message = Column(Text, nullable=True)
     extra_metadata = Column(JSON, default={}, nullable=True)
-    project_id = Column(Integer, nullable=True)
+    project_id = Column(String(64), ForeignKey("projects.project_id"), nullable=True)
     
     # Relationships
     steps = relationship("MissionStep", back_populates="mission", cascade="all, delete-orphan")
@@ -125,15 +138,15 @@ class MissionStep(Base):
     __tablename__ = "mission_steps"
     
     id = Column(Integer, primary_key=True, index=True)
-    mission_id = Column(Integer, index=True, nullable=False)
+    mission_id = Column(Integer, ForeignKey("missions.id"), index=True, nullable=False)
     step_name = Column(String(64), nullable=False)
     step_order = Column(Integer, nullable=False)
     status = Column(SQLEnum(MissionStepStatus), default=MissionStepStatus.PENDING, nullable=False)
     input_data = Column(JSON, default={}, nullable=True)
     output_data = Column(JSON, default={}, nullable=True)
     error_message = Column(Text, nullable=True)
-    started_at = Column(DateTime, nullable=True)
-    completed_at = Column(DateTime, nullable=True)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
     agent_name = Column(String(128), nullable=True)
     execution_time_ms = Column(Float, nullable=True)
     

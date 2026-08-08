@@ -1,32 +1,73 @@
 """
+SMART_AO V7 - test_pab_detector.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Test PAB Detector (Gate Bloquant Build 4)
+
+Le PAB (Prix Anormalement Bas) se calcule par comparaison du prix proposé
+au prix moyen du marché, et non pas par rapport à des dates de retard.
+Source: CCAG Article 53
 """
 import sys
 from pathlib import Path
-from decimal import Decimal
-from datetime import date
 
 project_root = Path(__file__).parent.parent.parent.absolute()
 sys.path.insert(0, str(project_root))
 
-from app.engines.math_engine.solvers.pab_detector import PABDetector
-from app.engines.math_engine.types import Amount, PenaltyType
+from app.engines.math_engine.pab_detector import PABDetector
 
-def test_pab_20pct():
-    detector = PABDetector()
-    result = detector.solve({'montant_marche_ht': 1000000, 'date_previsionnelle': '2024-01-01', 'date_reelle': '2024-01-15', 'currency': 'EUR'})
-    assert result.output.value == Decimal('200000')
-    assert result.penalties[0].penalty_type == PenaltyType.PAB_20PCT
-    print(f"✅ PAB 20%: {result.output.value} EUR")
 
-def test_pab_30pct():
+def test_pab_conforme():
     detector = PABDetector()
-    result = detector.solve({'montant_marche_ht': 1000000, 'date_previsionnelle': '2024-01-01', 'date_reelle': '2024-02-01', 'currency': 'EUR'})
-    assert result.output.value == Decimal('300000')
-    assert result.penalties[0].penalty_type == PenaltyType.PAB_30PCT
-    print(f"✅ PAB 30%: {result.output.value} EUR")
+    result = detector.detecter_pab(100000, 100000)
+    assert result.est_pab is False
+    assert result.niveau_risque == "FAIBLE"
+    print(f"✅ Prix conforme: PAB={result.est_pab}, risque={result.niveau_risque}")
+
+
+def test_pab_legere():
+    detector = PABDetector()
+    result = detector.detecter_pab(80000, 100000)
+    assert result.est_pab is False
+    assert result.niveau_risque == "MOYEN"
+    print(f"✅ Prix -20%: PAB={result.est_pab}, risque={result.niveau_risque}")
+
+
+def test_pab_detecte():
+    detector = PABDetector()
+    result = detector.detecter_pab(60000, 100000)
+    assert result.est_pab is True
+    assert result.niveau_risque == "ELEVE"
+    print(f"✅ PAB -40%: PAB={result.est_pab}, risque={result.niveau_risque}")
+
+
+def test_pab_critique():
+    detector = PABDetector()
+    result = detector.detecter_pab(40000, 100000)
+    assert result.est_pab is True
+    assert result.niveau_risque == "CRITIQUE"
+    print(f"✅ PAB critique -60%: PAB={result.est_pab}, risque={result.niveau_risque}")
+
+
+def test_pab_seuil_justification():
+    detector = PABDetector()
+    seuil = detector.calculer_seuil_justification(100000)
+    assert seuil == 70000.0
+    print(f"✅ Seuil justification 30%: {seuil} EUR")
+
 
 if __name__ == "__main__":
-    test_pab_20pct()
-    test_pab_30pct()
+    test_pab_conforme()
+    test_pab_legere()
+    test_pab_detecte()
+    test_pab_critique()
+    test_pab_seuil_justification()
     print("✅ TESTS PASSED: PAB Detector")

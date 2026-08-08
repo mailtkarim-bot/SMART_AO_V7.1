@@ -1,0 +1,174 @@
+# =============================================================================
+# SMART_AO V7 - Qdrant ConfigMap
+# =============================================================================
+# Configuration de Qdrant pour SMART_AO V7
+# Build 9 - Phase 5 - Gate 9
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smart-ao-qdrant-config
+  namespace: smart-ao-v7
+  labels:
+    app: smart-ao
+    component: qdrant
+    version: v7
+    build: "9"
+    tier: search
+
+# Configuration de Qdrant pour l'analyse vectorielle des DCE
+# SMART_AO V7 utilise Qdrant pour la recherche sémantique et la similarité
+
+data:
+  # Configuration principale
+  qdrant.yaml: |
+    # ===========================================================================
+    # SMART_AO V7 - Qdrant Configuration
+    # ===========================================================================
+    
+    service:
+      # Port HTTP pour les requêtes REST
+      http_port: 6333
+      
+      # Port gRPC pour les clients gRPC
+      grpc_port: 6334
+      
+      # Activer TLS (désactivé en développement)
+      enable_tls: false
+      
+      # Niveau de log
+      log_level: INFO
+      
+      # Nombre de threads pour le traitement des requêtes
+      max_threads: 8
+      
+      # Timeout pour les requêtes (en secondes)
+      request_timeout: 30
+      
+      # Taille maximale du payload (en Mo)
+      max_payload_size: 16
+    
+    storage:
+      # Moteur de stockage
+      engine: rocksdb
+      
+      # Chemin du répertoire de stockage
+      path: /qdrant/storage
+      
+      # Configuration RocksDB
+      rocksdb:
+        compression_type: lz4
+        max_background_jobs: 4
+        increase_parallelism: 4
+        max_open_files: 1024
+    
+    # Configuration de la mémoire
+    memory:
+      # Taille de la mémoire mappée pour les index
+      map_size: 8GB
+      
+      # Taille maximale du cache pour les requêtes
+      max_query_cache_size: 256MB
+      
+      # Taille maximale du cache pour les index
+      max_index_cache_size: 1GB
+    
+    # Configuration de l'API
+    api:
+      # Nombre maximal de collections
+      max_collections: 100
+      
+      # Taille maximale par collection (en Go)
+      max_collection_size: 10GB
+      
+      # Nombre maximal de shards par collection
+      max_shards: 10
+      
+      # Nombre maximal de réplicas par shard
+      max_replicas: 3
+    
+    # Configuration de la recherche
+    search:
+      # Nombre maximal de résultats par requête
+      max_results: 100
+      
+      # Taille maximale du vecteur
+      max_vector_dim: 4096
+      
+      # Distance métrique par défaut
+      default_distance: Cosine
+    
+    # Configuration de la persistance
+    persistence:
+      # Intervalle de sauvegarde automatique (en secondes)
+      auto_save_interval: 60
+      
+      # Nombre maximal de points avant sauvegarde automatique
+      auto_save_point_count: 10000
+      
+      # Activer la sauvegarde incrémentale
+      incremental_save: true
+    
+    # Configuration du monitoring
+    telemetry:
+      # Activer la télémétrie
+      enabled: false
+      
+      # Adresse du service de télémétrie
+      address: "0.0.0.0:9090"
+  
+  # Configuration spécifique pour SMART_AO V7
+  smart_ao_config.yaml: |
+    # ===========================================================================
+    # Configuration SMART_AO V7 pour Qdrant
+    # ===========================================================================
+    
+    # Collections pour l'analyse de DCE
+    collections:
+      - name: dce_documents
+        description: "Vecteurs des documents DCE pour recherche sémantique"
+        vector_size: 768  # Taille des embeddings (ex: sentence-transformers)
+        distance: Cosine
+        
+      - name: mission_results
+        description: "Vecteurs des résultats de mission pour similarité"
+        vector_size: 384  # Taille des embeddings (ex: miniLM)
+        distance: Cosine
+        
+      - name: agent_knowledge
+        description: "Base de connaissances des agents"
+        vector_size: 1024
+        distance: Cosine
+    
+    # Index pour la recherche rapide
+    indexes:
+      dce_documents:
+        - name: document_type
+          type: keyword
+        - name: project_id
+          type: keyword
+        - name: mission_id
+          type: keyword
+        - name: timestamp
+          type: datetime
+      
+      mission_results:
+        - name: mission_id
+          type: keyword
+        - name: agent_id
+          type: keyword
+        - name: risk_level
+          type: keyword
+    
+    # Paramètres de requête par défaut pour SMART_AO
+    default_query_params:
+      limit: 10
+      score_threshold: 0.7
+      with_payload: true
+      with_vectors: false
+    
+    # Configuration du cache
+    cache:
+      enabled: true
+      ttl: 300  # 5 minutes
+      max_size: 1000

@@ -1,145 +1,194 @@
 """
-SMART_AO V7 - Event Bus - Découplage total
-Source: ARCHITECTURE_V7_ENGINE.md §5 + ADR-043
-
-Parser ne connait personne. Il publie DocumentAnalysé.
-PAB, Certif, RSE écoutent sans que Parser le sache.
-
-Tech: asyncio.Queue en mémoire + table Postgres events pour replay
-PAS Kafka/Redis Streams (contrainte 16Go RAM Single-Tenant)
+SMART_AO V7 - bus.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
 """
 
-from typing import Dict, List, Callable, Any, Optional
-from datetime import datetime
-from pydantic import BaseModel, Field
+
+"""
+SMART_AO V7 - Event Bus
+=======================
+Bus d'événements asynchrone avec publish/subscribe/replay.
+"""
+
 import asyncio
-import logging
+from typing import Callable, Any, Dict, List, Optional, Union
 from collections import defaultdict
+import logging
+import threading
+
+from app.engines.event_bus.models import (
+    Event, EventType, MissionCreated, StepCompleted, WorkflowCompleted,
+    AgentExecuted, DocumentUploaded, EntitiesExtracted, DocumentChunked,
+)
+# Alias pour éviter conflit avec LegacyEvent
+BaseEvent = Event
 
 logger = logging.getLogger(__name__)
 
 
-class Event(BaseModel):
-    """
-    Event standardisé V7 - SSoT
-    Voir ARCHITECTURE_V7_ENGINE.md §5 tableau events
-    """
-    type: str = Field(..., description="MissionCréée, DocumentAnalysé, EntitésExtraites, ClassificationTerminée, AgentDémarré, AgentTerminé, RisqueDétecté, AnalyseTerminée, MissionÉchouée")
-    mission_id: str
-    payload: Dict[str, Any] = Field(default_factory=dict)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    source: str = Field(..., description="Nom engine/agent émetteur")
-    id: Optional[str] = None
-
-    class Config:
-        extra = "allow"
+# Wrapper pour compatibilité descendante avec l'ancien format Event(type=...)
+# @deprecated - À migrer vers les événements spécifiques
+class LegacyEvent:
+    """Wrapper pour compatibilité avec l'ancien format Event(type=...)."""
+    
+    def __init__(self, type: str, mission_id: str = None, payload: dict = None, source: str = None, **kwargs):
+        # Mapper les anciens types vers les nouveaux EventType
+        type_mapping = {
+            "MissionCréée": EventType.MISSION_CREATED,
+            "MissionÉchouée": EventType.WORKFLOW_COMPLETED,
+            "DocumentAnalysé": EventType.DOCUMENT_UPLOADED,
+            "EntitésExtraites": EventType.ENTITIES_EXTRACTED,
+            "ClassificationTerminée": EventType.DOCUMENT_CHUNKED,
+            "AgentDémarré": EventType.AGENT_EXECUTED,
+            "AgentTerminé": EventType.AGENT_EXECUTED,
+            "CompilationTerminée": EventType.WORKFLOW_COMPLETED,
+            "AnalyseTerminée": EventType.WORKFLOW_COMPLETED,
+        }
+        
+        event_type = type_mapping.get(type, EventType.WORKFLOW_COMPLETED)
+        
+        # Pour éviter les problèmes de compatibilité avec les champs des événements spécifiques,
+        # créer un BaseEvent générique avec toutes les données dans payload et metadata
+        # La migration vers les événements spécifiques se fera progressivement
+        self._event = BaseEvent(
+            event_type=event_type,
+            data=payload or {},
+            metadata={"source": source, "legacy_type": type, "mission_id": mission_id}
+        )
+    
+    # Déléguer toutes les méthodes à l'événement interne
+    def __getattr__(self, name):
+        return getattr(self._event, name)
 
 
 class EventBus:
-    """
-    EventBus intra-VPS V7
-    - publish() persiste PG + queue mémoire + notifie subscribers
-    - subscribe decorator
-    - replay(mission_id) pour debug
-    - Mode memory pour tests
-    """
-
-    def __init__(self, mode: str = "production"):
-        self.mode = mode  # production ou memory (tests)
-        self.subscribers: Dict[str, List[Callable]] = defaultdict(list)
-        self.queue: asyncio.Queue = asyncio.Queue()
-        self._events_store: List[Event] = []  # En prod = Postgres table events, ici mémoire pour skeleton
-        self._running = False
-        logger.info(f"EventBus initialized mode={mode} - V7 OS")
-
-    async def publish(self, event: Event):
-        """
-        Publie event:
-        1. Persiste (PG en prod, mémoire ici)
-        2. Queue mémoire
-        3. Notifie subscribers directs async
-        """
-        # 1. Persistance
-        await self._persist(event)
-
-        # 2. Queue
-        await self.queue.put(event)
-
-        # 3. Notif subscribers
-        handlers = self.subscribers.get(event.type, [])
-        for handler in handlers:
-            try:
-                if asyncio.iscoroutinefunction(handler):
-                    asyncio.create_task(handler(event))
-                else:
-                    # Supporte aussi classes avec __call__ ou méthodes
-                    asyncio.create_task(self._call_handler(handler, event))
-            except Exception as e:
-                logger.error(f"EventBus handler error {event.type}: {e}")
-
-        logger.debug(f"Published {event.type} mission={event.mission_id} source={event.source}")
-
-    async def _call_handler(self, handler: Any, event: Event):
-        """Wrapper pour handlers qui sont des classes instanciées"""
-        try:
-            if hasattr(handler, "__call__"):
-                result = handler(event)
-                if asyncio.iscoroutine(result):
-                    await result
-            elif hasattr(handler, "handle"):
-                result = handler.handle(event)
-                if asyncio.iscoroutine(result):
-                    await result
-        except Exception as e:
-            logger.error(f"Handler call failed {handler}: {e}")
-
-    async def _persist(self, event: Event):
-        """En prod: INSERT INTO events. Ici: mémoire"""
-        self._events_store.append(event)
-        # TODO prod: await db.execute("INSERT INTO events ...", event.dict())
-
-    def subscribe(self, event_type: str):
-        """
-        Decorator
-        Usage:
-            @event_bus.subscribe("DocumentAnalysé")
-            class PABAgent(BaseAgent): ...
-
-            @event_bus.subscribe("DocumentAnalysé")
-            async def on_doc(event): ...
-        """
-        def decorator(func_or_cls):
-            self.subscribers[event_type].append(func_or_cls)
-            logger.debug(f"Subscribed {func_or_cls} to {event_type}")
-            return func_or_cls
-        return decorator
-
-    def subscribe_fn(self, event_type: str, handler: Callable):
-        """Subscribe impératif pour tests"""
-        self.subscribers[event_type].append(handler)
-
-    async def replay(self, mission_id: str) -> List[Event]:
-        """Rejouabilité debug - tous events d'une mission"""
-        # En prod: SELECT * FROM events WHERE mission_id = ?
-        return [e for e in self._events_store if e.mission_id == mission_id]
-
-    async def get_all_events(self) -> List[Event]:
-        return list(self._events_store)
-
-    def clear(self):
-        """Tests only"""
-        self._events_store.clear()
-        self.subscribers.clear()
-        while not self.queue.empty():
-            try:
-                self.queue.get_nowait()
-            except:
-                break
+    """Bus d'événements asynchrone."""
+    
+    def __init__(self):
+        self._subscribers: Dict[EventType, List[Callable[[Event], None]]] = defaultdict(list)
+        self._event_history: List[Event] = []
+        self._lock = threading.Lock()
+        self._async_lock = asyncio.Lock()
+        self._max_history = 10000
+    
+    def subscribe(self, event_type: EventType, callback: Callable[[Event], None]) -> None:
+        """S'abonner à un type d'événement."""
+        with self._lock:
+            self._subscribers[event_type].append(callback)
+        logger.debug(f"Subscribed to {event_type.value}")
+    
+    def unsubscribe(self, event_type: EventType, callback: Callable[[Event], None]) -> None:
+        """Se désabonner d'un type d'événement."""
+        with self._lock:
+            if callback in self._subscribers[event_type]:
+                self._subscribers[event_type].remove(callback)
+        logger.debug(f"Unsubscribed from {event_type.value}")
+    
+    def publish(self, event: Event) -> None:
+        """Publier un événement (synchrone)."""
+        with self._lock:
+            # Sauvegarder dans l'historique
+            if len(self._event_history) >= self._max_history:
+                self._event_history.pop(0)
+            self._event_history.append(event)
+            
+            # Notifier les abonnés
+            for callback in self._subscribers.get(event.event_type, []):
+                try:
+                    callback(event)
+                except Exception as e:
+                    logger.error(f"Error in callback for {event.event_type.value}: {e}")
+    
+    async def publish_async(self, event: Event) -> None:
+        """Publier un événement (asynchrone)."""
+        async with self._async_lock:
+            with self._lock:
+                if len(self._event_history) >= self._max_history:
+                    self._event_history.pop(0)
+                self._event_history.append(event)
+            
+            # Notifier les abonnés de manière asynchrone
+            tasks = []
+            for callback in self._subscribers.get(event.event_type, []):
+                try:
+                    # Si le callback est une coroutine
+                    if asyncio.iscoroutinefunction(callback):
+                        tasks.append(asyncio.create_task(callback(event)))
+                    else:
+                        # Exécuter dans un thread pour ne pas bloquer
+                        loop = asyncio.get_event_loop()
+                        tasks.append(loop.run_in_executor(None, callback, event))
+                except Exception as e:
+                    logger.error(f"Error in async callback for {event.event_type.value}: {e}")
+            
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+    
+    def get_history(self, event_type: Optional[EventType] = None, limit: int = 100) -> List[Event]:
+        """Récupérer l'historique des événements."""
+        with self._lock:
+            if event_type is None:
+                return list(reversed(self._event_history[-limit:]))
+            else:
+                return [e for e in reversed(self._event_history[-limit:]) if e.event_type == event_type]
+    
+    async def replay(self, mission_id: str, limit: int = 100) -> List[Event]:
+        """Rejouer les événements pour une mission (alias pour get_history filtré)."""
+        with self._lock:
+            return [e for e in reversed(self._event_history[-limit:]) 
+                   if e.metadata.get("mission_id") == mission_id]
+    
+    def clear_history(self) -> None:
+        """Effacer l'historique."""
+        with self._lock:
+            self._event_history.clear()
+    
+    def clear_subscribers(self) -> None:
+        """Effacer tous les abonnés."""
+        with self._lock:
+            self._subscribers.clear()
 
 
-# Singleton global - comme registry
-event_bus = EventBus(mode="production")
+# Instance singleton
+event_bus = EventBus()
 
-# Pour tests
+
+def get_event_bus() -> EventBus:
+    """Récupérer l'instance singleton du EventBus."""
+    return event_bus
+
+
 def create_test_event_bus() -> EventBus:
-    return EventBus(mode="memory")
+    """Créer une nouvelle instance EventBus pour les tests (isolation)."""
+    return EventBus()
+
+
+# Pour compatibilité descendante : exporter LegacyEvent comme Event
+# NOTE: Cela permet à workflow.py d'utiliser Event(type=...) sans casser
+# À long terme, migrer workflow.py vers les événements spécifiques
+Event = LegacyEvent  # type: ignore[no-redef]
+
+
+# Décorateur pour simplifier la publication
+def publish_event(event_type: EventType, **kwargs) -> Event:
+    """Créer et publier un événement."""
+    event_class = {
+        EventType.DOCUMENT_UPLOADED: Event,
+        EventType.ENTITIES_EXTRACTED: Event,
+        EventType.DOCUMENT_CHUNKED: Event,
+        EventType.EMBEDDING_GENERATED: Event,
+        EventType.QDRANT_INDEXED: Event,
+        EventType.MISSION_CREATED: Event,
+        EventType.STEP_COMPLETED: Event,
+        EventType.WORKFLOW_COMPLETED: Event,
+        EventType.AGENT_EXECUTED: Event,
+    }.get(event_type, Event)
+    
+    event = event_class(**kwargs)
+    event_bus.publish(event)
+    return event

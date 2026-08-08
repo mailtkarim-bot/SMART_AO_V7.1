@@ -1,4 +1,15 @@
 """
+SMART_AO V7 - agent_penalites.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Pénalités Agent
 Source: ARCHITECTURE_V7_ENGINE.md §2 + ADR-044 + RAPPORT (1).md §7.2
 
@@ -48,6 +59,9 @@ class PenalitesAgent(BaseAgent):
         if delai_reel > delai_execution:
             retard_jours = delai_reel - delai_execution
             
+            # Données financières pour Math Engine (accès RBAC patron uniquement)
+            financial_data = {}
+            
             if ccag:
                 # CCAG: 10% pour retard > 30 jours, 5% pour 15-30 jours
                 if retard_jours > 30:
@@ -61,14 +75,18 @@ class PenalitesAgent(BaseAgent):
                     niveau = "MOYEN"
                     
                 penalite_montant = montant_marche * penalite_taux
+                financial_data["ccag"] = {
+                    "penalite_montant": penalite_montant,
+                    "penalite_taux": penalite_taux,
+                    "base_calcul": montant_marche
+                }
                 findings.append({
-                    "type": "PENALITE_CCAG",
+                    "type": "PENALITE_CCAG_DETECTEE",
                     "niveau": niveau,
                     "retard_jours": retard_jours,
                     "taux": f"{penalite_taux * 100}%",
-                    "montant": f"{penalite_montant:.2f} EUR",
                     "reference": "CCAG Article 14-1",
-                    "recommandation": "Négocier délai supplémentaire ou accepter pénalité"
+                    "recommandation": "Négocier délai supplémentaire ou accepter pénalité (calcul exact dans financial_data)"
                 })
             
             if ccmi:
@@ -77,15 +95,19 @@ class PenalitesAgent(BaseAgent):
                 penalite_jour = max(0, (retard_jours - 10)) * 1000
                 penalite_totale = penalite_base + penalite_jour
                 
+                financial_data["ccmi"] = {
+                    "penalite_base": penalite_base,
+                    "penalite_jour": penalite_jour,
+                    "penalite_totale": penalite_totale
+                }
                 findings.append({
-                    "type": "PENALITE_CCMI",
+                    "type": "PENALITE_CCMI_DETECTEE",
                     "niveau": "CRITIQUE",
                     "retard_jours": retard_jours,
-                    "penalite_base": f"{penalite_base} EUR",
-                    "penalite_jour": f"{penalite_jour} EUR",
-                    "penalite_totale": f"{penalite_totale} EUR",
+                    "penalite_base": f"{penalite_base}",
+                    "penalite_jour": f"{penalite_jour}",
                     "reference": "CCMI inf+1000",
-                    "recommandation": "Urgence: contacter maître d'ouvrage"
+                    "recommandation": "Urgence: contacter maître d'ouvrage (détails financiers dans financial_data)"
                 })
         
         # Détection de mots-clés pénalités
@@ -116,6 +138,7 @@ class PenalitesAgent(BaseAgent):
             confidence=0.92,
             status="SUCCESS",
             findings=findings,
+            financial_data=financial_data if financial_data else None,
             source_pages=[5, 20, 25],
             execution_time_ms=0
         )

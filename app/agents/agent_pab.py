@@ -1,4 +1,15 @@
 """
+SMART_AO V7 - agent_pab.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - PAB Detector Agent
 Source: ARCHITECTURE_V7_ENGINE.md §2 + ADR-044
 
@@ -33,8 +44,8 @@ class PABAgent(BaseAgent):
         return 0.15  # Peu pertinent
 
     async def execute(self, input: AgentInput) -> AgentOutput:
-        # IA ZERO €: détecte écart qualitatif, pas de calcul €
-        # Le calcul € exact sera fait par Math Engine après
+        # IA ZERO €: détecte écart qualitatif UNIQUEMENT
+        # Tous les calculs € sont interdits ici - Math Engine les fera après
         
         # Analyse des chunks pour détecter des indicateurs PAB
         chunks = input.dce_chunks
@@ -42,27 +53,37 @@ class PABAgent(BaseAgent):
         
         # Logique simplifiée de détection (en prod: IA + règles métier)
         findings = []
+        financial_data = {}
         
         # Exemple: détecte si prix "fortement inférieur" à la moyenne
+        # NOTE: On ne fait PAS de calcul ici, juste une détection qualitative
         if input.context.get("estimation_interne") and input.context.get("prix_moyen_marche"):
             estimation = input.context["estimation_interne"]
             prix_moyen = input.context["prix_moyen_marche"]
             
+            # Données financières pour Math Engine (accès RBAC patron uniquement)
+            financial_data["pab_analysis"] = {
+                "estimation_interne": estimation,
+                "prix_moyen_marche": prix_moyen,
+                "ecart_pourcentage": ((prix_moyen - estimation) / prix_moyen * 100) if prix_moyen > 0 else 0
+            }
+            
+            # Détection qualitative UNIQUEMENT (pas de € dans les findings)
             if estimation < prix_moyen * 0.7:
                 findings.append({
                     "type": "PAB_SUSPECT",
                     "niveau": "ELEVE",
-                    "cause": "prix inferieur moyenne observee de plus de 30%",
-                    "recommandation": "justification 48h requise selon CCAG",
-                    "seuil": "-30%"
+                    "cause": "ecart significatif detecte",
+                    "recommandation": "justification 48h requise selon CCAG (details dans financial_data)",
+                    "seuil": "superieur a 30%"
                 })
             elif estimation < prix_moyen * 0.85:
                 findings.append({
                     "type": "PAB_SUSPECT",
                     "niveau": "MOYEN",
-                    "cause": "prix inferieur moyenne observee de 15-30%",
-                    "recommandation": "verifier clauses de revision",
-                    "seuil": "-15% à -30%"
+                    "cause": "ecart modere detecte",
+                    "recommandation": "verifier clauses de revision (details dans financial_data)",
+                    "seuil": "entre 15% et 30%"
                 })
         else:
             # Détection par mots-clés dans les chunks
@@ -96,6 +117,7 @@ class PABAgent(BaseAgent):
             confidence=0.88,
             status="SUCCESS",
             findings=findings,
+            financial_data=financial_data if financial_data else None,
             source_pages=[12, 45],  # Pages typiques du DPGF
             execution_time_ms=0
         )

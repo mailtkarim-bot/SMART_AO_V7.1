@@ -1,14 +1,25 @@
 """
+SMART_AO V7 - events.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Event Model
 =========================
 Event Bus persistence models
 Source: ARCHITECTURE_V7_ENGINE.md §4.4
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
-from sqlalchemy import Column, String, Text, DateTime, Integer, JSON
+from sqlalchemy import Column, String, Text, DateTime, Integer, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy import Enum as SQLEnum
 
@@ -60,7 +71,7 @@ class Event(Base):
     source = Column(String(128), nullable=True)
     mission_id = Column(Integer, nullable=True)
     step_id = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     
     def __repr__(self):
         return f"<Event(id={self.id}, event_type={self.event_type}, source={self.source})>"
@@ -85,11 +96,11 @@ class MissionEvent(Base):
     __tablename__ = "mission_events"
     
     id = Column(Integer, primary_key=True, index=True)
-    mission_id = Column(Integer, index=True, nullable=True)
+    mission_id = Column(Integer, ForeignKey("missions.id"), index=True, nullable=True)
     step_id = Column(Integer, nullable=True)
     event_type = Column(String(128), nullable=False)
     data = Column(JSON, default={}, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     
     # Relationships
     mission = relationship("Mission", back_populates="events")

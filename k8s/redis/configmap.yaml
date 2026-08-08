@@ -1,0 +1,172 @@
+# =============================================================================
+# SMART_AO V7 - Redis ConfigMap
+# =============================================================================
+# Configuration de Redis pour SMART_AO V7
+# Build 9 - Phase 5 - Gate 9
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smart-ao-redis-config
+  namespace: smart-ao-v7
+  labels:
+    app: smart-ao
+    component: redis
+    version: v7
+    build: "9"
+    tier: cache
+
+# Configuration de Redis pour le caching et la gestion de session
+# SMART_AO V7 utilise Redis pour le cache des résultats et les sessions
+
+data:
+  # Configuration principale de Redis
+  redis.conf: |
+    # ===========================================================================
+    # SMART_AO V7 - Redis Configuration
+    # ===========================================================================
+    
+    # BASIQUE
+    # --------
+    bind 0.0.0.0
+    port 6379
+    daemonize no
+    pidfile /var/run/redis.pid
+    
+    # PERSISTANCE
+    # -----------
+    # Activer l'AOF (Append Only File) pour une meilleure durabilité
+    appendonly yes
+    appendfilename "appendonly.aof"
+    appendfsync everysec
+    no-appendfsync-on-rewrite yes
+    auto-aof-rewrite-percentage 100
+    auto-aof-rewrite-min-size 64mb
+    
+    # Sauvegardes RDB
+    save 900 1      # Sauvegarder si 1 clé change en 15 min
+    save 300 10     # Sauvegarder si 10 clés changent en 5 min
+    save 60 10000   # Sauvegarder si 10000 clés changent en 1 min
+    
+    dbfilename dump.rdb
+    dir /data
+    
+    # MÉMOIRE
+    # --------
+    maxmemory 2gb
+    maxmemory-policy allkeys-lru
+    maxmemory-samples 5
+    
+    # SÉCURITÉ
+    # --------
+    # Le mot de passe est défini via la variable d'environnement REDIS_PASSWORD
+    # protected-mode yes
+    
+    # CONNEXIONS
+    # ----------
+    timeout 300
+    tcp-keepalive 300
+    tcp-backlog 511
+    
+    # CLIENTS
+    # -------
+    maxclients 10000
+    client-output-buffer-limit normal 0 0 0
+    client-output-buffer-limit replica 256mb 64mb 60
+    client-output-buffer-limit pubsub 32mb 8mb 60
+    
+    # PERFORMANCE
+    # -----------
+    databases 16
+    always-show-logo no
+    
+    # LOGGING
+    # -------
+    loglevel notice
+    logfile ""
+    
+    # REPLICATION (si nécessaire)
+    # --------------
+    # replica-read-only yes
+    # repl-diskless-sync yes
+    # repl-diskless-sync-delay 5
+    
+    # RATE LIMITING
+    # --------------
+    client-query-buffer-limit 1gb
+    
+    # SCRIPTS
+    # -------
+    lua-time-limit 5000
+    
+    # KEY EXPIRATION
+    # ---------------
+    active-defrag yes
+    active-defrag-threshold-lower 10
+    active-defrag-threshold-upper 100
+    active-defrag-cycle-min 5
+    active-defrag-cycle-max 75
+    active-defrag-cycle-min 25
+    active-expire-effort 1
+  
+  # Configuration spécifique pour SMART_AO V7
+  smart_ao_redis.conf: |
+    # ===========================================================================
+    # Configuration SMART_AO V7 pour Redis
+    # ===========================================================================
+    
+    # Préfixes des clés pour éviter les conflits
+    key_prefixes:
+      session: "sess:"
+      cache: "cache:"
+      rate_limit: "ratelimit:"
+      circuit_breaker: "cb:"
+      workflow: "wf:"
+      mission: "miss:"
+      agent: "agt:"
+      document: "doc:"
+    
+    # TTL par défaut pour différentes catégories de données
+    ttl_defaults:
+      session: 86400       # 24 heures
+      cache: 3600          # 1 heure
+      rate_limit: 60      # 1 minute
+      circuit_breaker: 300 # 5 minutes
+      workflow: 604800     # 7 jours
+      mission: 2592000    # 30 jours
+      agent: 604800       # 7 jours
+      document: 7776000   # 90 jours
+    
+    # Configuration du cache
+    cache_settings:
+      # Taille maximale du cache pour les résultats des agents
+      agent_results_cache_size: 1000
+      agent_results_cache_ttl: 1800  # 30 minutes
+      
+      # Taille maximale du cache pour les embeddings
+      embeddings_cache_size: 5000
+      embeddings_cache_ttl: 3600  # 1 heure
+      
+      # Taille maximale du cache pour les documents analysés
+      documents_cache_size: 10000
+      documents_cache_ttl: 86400  # 24 heures
+    
+    # Configuration de la gestion des sessions
+    session_settings:
+      session_timeout: 86400  # 24 heures
+      sliding_expiration: true
+      max_session_size: 4096  # 4 Ko
+    
+    # Configuration pour le rate limiting
+    rate_limit_settings:
+      enabled: true
+      window_size: 60  # secondes
+      max_requests: 100
+      burst_size: 50
+    
+    # Configuration pour les circuit breakers
+    circuit_breaker_settings:
+      failure_threshold: 5
+      success_threshold: 2
+      timeout: 60  # secondes
+      reset_timeout: 300  # 5 minutes

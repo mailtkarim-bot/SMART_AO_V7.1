@@ -1,4 +1,15 @@
 """
+SMART_AO V7 - registry.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Agent Registry - Découverte par capacités
 Source: ARCHITECTURE_V7_ENGINE.md §3 + ADR-042
 
@@ -98,6 +109,10 @@ class AgentRegistry:
 
     def get_by_name(self, name: str) -> Optional[object]:
         return self._agents_by_name.get(name)
+
+    def get_agent_names(self) -> List[str]:
+        """Retourne la liste des noms de tous les agents enregistrés."""
+        return list(self._agents_by_name.keys())
 
     def clear(self):
         """Pour tests uniquement"""

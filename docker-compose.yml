@@ -36,7 +36,8 @@ services:
       # Monter les migrations pour exécution automatique au premier démarrage
       - ./app/alembic:/docker-entrypoint-initdb.d:ro
     ports:
-      - "${DB_PORT:-5432}:5432"
+      # Limiter l'écoute à localhost pour éviter l'exposition publique en dev
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-smart_ao} -d ${DB_NAME:-smart_ao_v7}"]
       interval: 10s
@@ -45,9 +46,6 @@ services:
       start_period: 30s
     networks:
       - smart_ao_network
-    # Persistance des données
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
 
   # =========================================================================
   # Qdrant - Moteur de recherche vectorielle
@@ -67,14 +65,35 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
     ports:
-      - "${QDRANT_PORT:-6333}:6333"     # HTTP API
-      - "${QDRANT_GRPC_PORT:-6334}:6334" # gRPC API
+      - "127.0.0.1:${QDRANT_PORT:-6333}:6333"     # HTTP API
+      - "127.0.0.1:${QDRANT_GRPC_PORT:-6334}:6334" # gRPC API
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:6333"]
+      test: ["CMD-SHELL", "curl -f http://localhost:6333 >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
+    networks:
+      - smart_ao_network
+
+  # =========================================================================
+  # Redis - Cache et session store
+  # =========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: smart_ao_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     networks:
       - smart_ao_network
 
@@ -91,6 +110,8 @@ services:
       postgres:
         condition: service_healthy
       qdrant:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     environment:
       # Configuration PostgreSQL
@@ -143,6 +164,9 @@ volumes:
   qdrant_data:
     driver: local
     name: smart_ao_qdrant_data
+  redis_data:
+    driver: local
+    name: smart_ao_redis_data
   app_logs:
     driver: local
     name: smart_ao_app_logs

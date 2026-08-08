@@ -1,0 +1,86 @@
+# SMART_AO V7 - Caddyfile
+# =========================
+# Configuration du reverse proxy et du serveur web
+# Auteur: NOOR - Architecte Principal
+# Version: 1.0.0
+# Date: 06/08/2026
+# Build: 9 - Phase: 5
+
+# Configuration globale
+{
+    # Mode production
+    debug off
+    
+    # Adresse et port
+    :80
+    
+    # Redirection HTTP vers HTTPS (si SSL configuré)
+    # :443 {
+    #     tls {
+    #         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    #     }
+    # }
+}
+
+# Serveur principal
+:8000 {
+    # Reverse proxy vers FastAPI
+    reverse_proxy /api/* localhost:8000
+    reverse_proxy /docs localhost:8000
+    reverse_proxy /redoc localhost:8000
+    reverse_proxy /openapi.json localhost:8000
+    
+    # Gestion des erreurs
+    @errors {
+        status 400 401 403 404 405 500 502 503 504
+    }
+    handle @errors {
+        respond "{\"error\": \"{http.error.status_text}\", \"status\": {http.error.status}}" 400
+    }
+}
+
+# Streamlit UI (si utilisé)
+:8501 {
+    reverse_proxy localhost:8501
+}
+
+# Qdrant Dashboard
+:6333 {
+    reverse_proxy localhost:6333
+}
+
+# PostgreSQL Admin (optionnel - à sécuriser)
+# :5432 {
+#     reverse_proxy localhost:5432
+# }
+
+# Redis Commander (optionnel)
+# :8081 {
+#     reverse_proxy localhost:8081
+# }
+
+# MinIO Console (si utilisé)
+:9001 {
+    reverse_proxy localhost:9001
+}
+
+# Configuration pour la production
+# =================================
+# Pour activer HTTPS, décommentez et configurez:
+# 1. Installer Caddy avec support TLS
+# 2. Configurer les DNS et l'ACME
+# 3. Décommentez les sections :443
+
+# Configuration pour le développement
+# ===================================
+# Pour le développement local, utilisez:
+#   caddy run --config Caddyfile --adapter caddyfile
+
+# Logs
+log {
+    output file /var/log/caddy/access.log {
+        roll_size 100MiB
+        roll_keep 10
+        roll_keep_for 720h
+    }
+}

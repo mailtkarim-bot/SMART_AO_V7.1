@@ -1,4 +1,15 @@
 """
+SMART_AO V7 - agent_soged.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - SOGED Agent (Société de Gestion des Déchets)
 Source: ARCHITECTURE_V7_ENGINE.md §2 + ADR-044 + RAPPORT (1).md §7.7
 
@@ -34,20 +45,28 @@ class SOGEDAgent(BaseAgent):
     async def execute(self, input: AgentInput) -> AgentOutput:
         chunks = input.dce_chunks
         findings = []
+        financial_data = {}
         
         dechets = input.context.get("dechets", {})
         ratios_dechets = input.context.get("ratios_ademes_dechets", {})
         
-        # Analyse des déchets par catégorie
+        # Stocker données financières
+        if dechets:
+            financial_data["dechets"] = {
+                "total_tonnes": sum(d.get("quantite_tonnes", 0) for d in dechets.values()),
+                "total_cout": sum(d.get("cout_evacuation", 0) for d in dechets.values()),
+                "par_categorie": dechets
+            }
+        
+        # Analyse des déchets par catégorie (qualitatif UNIQUEMENT)
         if dechets:
             total_tonnes = sum(d.get("quantite_tonnes", 0) for d in dechets.values())
-            total_cout = sum(d.get("cout_evacuation", 0) for d in dechets.values())
             
             findings.append({
                 "type": "DECHETS_TOTAUX",
                 "niveau": "INFO",
                 "quantite": f"{total_tonnes:.2f} tonnes",
-                "cout": f"{total_cout:.2f} EUR",
+                "details": "Analyse complète dans financial_data",
                 "recommandation": "Optimiser tri et valorisation"
             })
             
@@ -59,7 +78,7 @@ class SOGEDAgent(BaseAgent):
                         "niveau": "ELEVE",
                         "categorie": categorie,
                         "quantite": f"{data.get('quantite_tonnes', 0):.2f} tonnes",
-                        "cout": f"{data.get('cout_evacuation', 0):.2f} EUR",
+                        "details": "Coût détaillé dans financial_data",
                         "recommandation": "Filière spécialisée obligatoire"
                     })
         
@@ -107,6 +126,7 @@ class SOGEDAgent(BaseAgent):
             confidence=0.85,
             status="SUCCESS",
             findings=findings,
+            financial_data=financial_data if financial_data else None,
             source_pages=[6, 12, 28],
             execution_time_ms=0
         )

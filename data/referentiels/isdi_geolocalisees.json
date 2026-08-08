@@ -1,0 +1,100 @@
+{
+  "version": "2026-01",
+  "description": "Installations de Stockage des Déchets Inertes (ISDI) et ISDND géolocalisées par département",
+  "unite_transport_eur_km": 0.85,
+  "isdi": [
+    {
+      "id": "ISDI-01-001",
+      "nom": "ISDI Bourg-en-Bresse",
+      "departement": "01",
+      "region": "Auvergne-Rhone-Alpes",
+      "lat": 46.2052,
+      "lon": 5.2258,
+      "capacite_t": 150000,
+      "tarif_m3": 12.5,
+      "types_acceptes": ["terre", "remblai", "cailloux"]
+    },
+    {
+      "id": "ISDI-13-001",
+      "nom": "ISDI Marseille Est",
+      "departement": "13",
+      "region": "PACA",
+      "lat": 43.2965,
+      "lon": 5.3698,
+      "capacite_t": 250000,
+      "tarif_m3": 15.0,
+      "types_acceptes": ["terre", "sable"]
+    },
+    {
+      "id": "ISDI-33-001",
+      "nom": "ISDI Bordeaux Nord",
+      "departement": "33",
+      "region": "Nouvelle-Aquitaine",
+      "lat": 44.8378,
+      "lon": -0.5792,
+      "capacite_t": 200000,
+      "tarif_m3": 13.5,
+      "types_acceptes": ["terre", "argile"]
+    },
+    {
+      "id": "ISDI-59-001",
+      "nom": "ISDI Lille Sud",
+      "departement": "59",
+      "region": "Hauts-de-France",
+      "lat": 50.6292,
+      "lon": 3.0573,
+      "capacite_t": 180000,
+      "tarif_m3": 12.0,
+      "types_acceptes": ["terre", "remblai"]
+    },
+    {
+      "id": "ISDI-69-001",
+      "nom": "ISDI Lyon Saint-Priest",
+      "departement": "69",
+      "region": "Auvergne-Rhone-Alpes",
+      "lat": 45.6961,
+      "lon": 4.9407,
+      "capacite_t": 300000,
+      "tarif_m3": 14.0,
+      "types_acceptes": ["terre", "cailloux", "sable"]
+    },
+    {
+      "id": "ISDI-75-001",
+      "nom": "ISDI Paris Sud",
+      "departement": "75",
+      "region": "IDF",
+      "lat": 48.8566,
+      "lon": 2.3522,
+      "capacite_t": 220000,
+      "tarif_m3": 18.0,
+      "types_acceptes": ["terre", "argile"]
+    },
+    {
+      "id": "ISDI-77-001",
+      "nom": "ISDI Melun",
+      "departement": "77",
+      "region": "IDF",
+      "lat": 48.5421,
+      "lon": 2.6554,
+      "capacite_t": 170000,
+      "tarif_m3": 16.5,
+      "types_acceptes": ["terre", "remblai"]
+    },
+    {
+      "id": "ISDI-78-001",
+      "nom": "ISDI Trappes",
+      "departement": "78",
+      "region": "IDF",
+      "lat": 48.7774,
+      "lon": 1.9996,
+      "capacite_t": 160000,
+      "tarif_m3": 17.0,
+      "types_acceptes": ["terre", "sable"]
+    }
+  ],
+  "trackterres": {
+    "obligatoire": true,
+    "cout_tracking_m3": 1.2,
+    "url_service": "https://trackterres.service-public.fr"
+  }
+}

@@ -1,4 +1,15 @@
 """
+SMART_AO V7 - mission.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Mission - Tour de contrôle Workflow Engine
 Source: ARCHITECTURE_V7_ENGINE.md §4 + ADR-041 + ADR-053
 
@@ -9,12 +20,13 @@ Mapping: Mission DONE + Go => Project ANALYSE_TERMINEE
 
 from enum import Enum
 from typing import List, Dict, Optional, Any
-from datetime import datetime
-from pydantic import BaseModel, Field
+from datetime import datetime, timezone
+from pydantic import BaseModel, Field, ConfigDict
 import uuid
 
 
 class MissionStatus(str, Enum):
+    PENDING = "PENDING"
     CREATED = "CREATED"
     PARSING = "PARSING"
     EXTRACTING = "EXTRACTING"
@@ -55,6 +67,11 @@ class MissionStep(BaseModel):
         if self.started_at and self.ended_at:
             return int((self.ended_at - self.started_at).total_seconds() * 1000)
         return None
+    
+    @property
+    def step_name(self) -> str:
+        """Alias pour name pour compatibilité avec les tests."""
+        return self.name
 
     def to_dict(self):
         return {
@@ -75,19 +92,19 @@ class Mission(BaseModel):
     """
     id: str = Field(default_factory=lambda: f"mission_{uuid.uuid4().hex[:6]}")
     type: str = Field(default="ANALYSE_DCE", description="ANALYSE_DCE, BATCH, REPLAY")
-    status: MissionStatus = MissionStatus.CREATED
+    status: MissionStatus = MissionStatus.PENDING
     documents: List[str] = Field(default_factory=list, description="17 PDF IDs ex: 412 pages")
     workflow: List[MissionStep] = Field(default_factory=list)
     current_step_idx: int = 0
     context: Dict[str, Any] = Field(default_factory=dict, description="Vault, SIRET, estimation_interne, needed_capabilities")
     priority: str = Field(default="NORMALE", pattern="^(BASSE|NORMALE|HAUTE|URGENTE)$")
-    created_by: str = Field(..., description="user_id patron")
+    created_by: str = Field(default="system", description="user_id patron")
     project_id: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def __init__(self, **data):
-        # Auto-crée workflow 6 steps si non fourni
+        # Auto-crée workflow 6 steps canoniques V7 si non fourni
         if "workflow" not in data or not data["workflow"]:
             data["workflow"] = [
                 MissionStep(name="PARSER", timeout_seconds=600),
@@ -133,8 +150,7 @@ class Mission(BaseModel):
             "created_at": self.created_at.isoformat(),
         }
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 # Pour tests et API

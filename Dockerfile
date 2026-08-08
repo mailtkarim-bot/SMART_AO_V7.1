@@ -12,11 +12,18 @@ FROM python:3.12-slim as builder
 
 WORKDIR /app
 
+# Outils de compilation et librairies système nécessaires à la compilation
+# de dépendances cryptographiques (argon2, python-jose, httpx, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libffi-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copier uniquement les fichiers nécessaires pour l'installation
 COPY requirements.txt .
 
 # Installer les dépendances dans un virtual environment isolé
-# Utiliser --user pour éviter les conflits de permissions
 RUN python -m venv /opt/venv && \
     /opt/venv/bin/pip install --no-cache-dir --upgrade pip && \
     /opt/venv/bin/pip install --no-cache-dir -r requirements.txt

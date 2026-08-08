@@ -1,4 +1,15 @@
 """
+SMART_AO V7 - agent_mapa.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - MAPA Generator Agent
 Source: ARCHITECTURE_V7_ENGINE.md §2 + ADR-044 + RAPPORT (1).md §7.27
 
@@ -34,18 +45,24 @@ class MAPAGeneratorAgent(BaseAgent):
     async def execute(self, input: AgentInput) -> AgentOutput:
         chunks = input.dce_chunks
         findings = []
+        financial_data = {}
         
         mapa_data = input.context.get("mapa", {})
         
         if mapa_data:
             montant = mapa_data.get("montant", 0)
             seuils = mapa_data.get("seuils", {})
+            
+            # Stocker dans financial_data
             if montant > 0:
+                financial_data["mapa"] = {
+                    "montant": montant,
+                    "seuils": seuils
+                }
                 findings.append({
                     "type": "MAPA_ANALYSEE",
                     "niveau": "INFO",
-                    "montant": f"{montant:.2f} EUR",
-                    "seuil_europeen": seuils.get("europeen", 0),
+                    "details": "Données MAPA détectées (voir financial_data)",
                     "recommandation": "Vérifier conformité seuils"
                 })
         
@@ -75,6 +92,7 @@ class MAPAGeneratorAgent(BaseAgent):
             confidence=0.90,
             status="SUCCESS",
             findings=findings,
+            financial_data=financial_data if financial_data else None,
             source_pages=[1, 5, 10],
             execution_time_ms=0
         )

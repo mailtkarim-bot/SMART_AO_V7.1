@@ -1,0 +1,152 @@
+# =============================================================================
+# SMART_AO V7 - Ingress
+# =============================================================================
+# Configuration Ingress pour exposer l'API SMART_AO V7
+# Build 9 - Phase 5 - Gate 9
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: smart-ao-ingress
+  namespace: smart-ao-v7
+  labels:
+    app: smart-ao
+    component: app
+    version: v7
+    build: "9"
+    tier: application
+  annotations:
+    description: "Ingress pour l'API REST SMART_AO V7"
+    # Annotations pour le contrôleur Ingress (ex: NGINX, Traefik)
+    # kubernetes.io/ingress.class: "nginx"
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    
+    # Configuration NGINX
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/client-max-body-size: "50m"
+    
+    # Configuration CORS
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "http://localhost:3000,http://localhost:8080,https://smart-ao-v7.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    
+    # Configuration Rate Limiting
+    nginx.ingress.kubernetes.io/limit-rpm: "100"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+    nginx.ingress.kubernetes.io/limit-whitelist: "127.0.0.1"
+    
+    # Configuration Authentification
+    # nginx.ingress.kubernetes.io/auth-url: "http://smart-ao-app:8000/api/v1/auth/validate"
+    # nginx.ingress.kubernetes.io/auth-method: GET
+    # nginx.ingress.kubernetes.io/auth-response-headers: "X-Auth-User, X-Auth-Email"
+    
+    # Configuration Cache
+    nginx.ingress.kubernetes.io/cache-enabled: "true"
+    nginx.ingress.kubernetes.io/cache-max-size: "100m"
+    nginx.ingress.kubernetes.io/cache-valid: "300"
+
+spec:
+  ingressClassName: nginx
+  
+  rules:
+  - host: smart-ao-v7.local
+    http:
+      paths:
+      - path: /api/v1/(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: smart-ao-app
+            port:
+              number: 8000
+      - path: /health
+        pathType: Prefix
+        backend:
+          service:
+            name: smart-ao-app
+            port:
+              number: 8000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: smart-ao-app
+            port:
+              number: 8000
+  
+  # Configuration pour la production
+  - host: api.smart-ao-v7.com
+    http:
+      paths:
+      - path: /api/v1/(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: smart-ao-app
+            port:
+              number: 8000
+      - path: /health
+        pathType: Prefix
+        backend:
+          service:
+            name: smart-ao-app
+            port:
+              number: 8000
+  
+  # TLS Configuration (à activer avec cert-manager ou manuellement)
+  # tls:
+  # - hosts:
+  #   - api.smart-ao-v7.com
+  #   secretName: smart-ao-tls-secret
+
+---
+
+# Ingress pour les WebSockets (si nécessaire pour les notifications en temps réel)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: smart-ao-websocket-ingress
+  namespace: smart-ao-v7
+  labels:
+    app: smart-ao
+    component: app
+    version: v7
+    build: "9"
+    tier: application
+  annotations:
+    description: "Ingress pour les WebSockets SMART_AO V7"
+    nginx.ingress.kubernetes.io/proxy-websocket: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+
+spec:
+  ingressClassName: nginx
+  
+  rules:
+  - host: smart-ao-v7.local
+    http:
+      paths:
+      - path: /ws/(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: smart-ao-app
+            port:
+              number: 8000
+  
+  - host: api.smart-ao-v7.com
+    http:
+      paths:
+      - path: /ws/(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: smart-ao-app
+            port:
+              number: 8000

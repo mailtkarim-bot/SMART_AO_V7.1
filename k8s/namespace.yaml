@@ -1,0 +1,20 @@
+# =============================================================================
+# SMART_AO V7 - Namespace Kubernetes
+# =============================================================================
+# Crée un namespace dédié pour isoler toutes les ressources de l'application
+# Build 9 - Phase 5 - Gate 9
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: smart-ao-v7
+  labels:
+    app: smart-ao
+    version: v7
+    build: "9"
+    environment: production
+    managed-by: kubernetes
+  annotations:
+    description: "Namespace pour SMART_AO V7 - Engine OS pour l'analyse de DCE"
+    created-by: "NOOR - Architecte Principal"
+    created-at: "2026-08-05"

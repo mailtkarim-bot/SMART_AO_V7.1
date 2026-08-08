@@ -1,0 +1,162 @@
+# =============================================================================
+# SMART_AO V7 - Qdrant Deployment
+# =============================================================================
+# Déploiement de Qdrant Vector Search Engine pour SMART_AO V7
+# Build 9 - Phase 5 - Gate 9
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smart-ao-qdrant
+  namespace: smart-ao-v7
+  labels:
+    app: smart-ao
+    component: qdrant
+    version: v7
+    build: "9"
+    tier: search
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smart-ao
+      component: qdrant
+  
+  strategy:
+    type: Recreate
+    rollingUpdate: null
+  
+  template:
+    metadata:
+      labels:
+        app: smart-ao
+        component: qdrant
+        version: v7
+        build: "9"
+        tier: search
+    
+    spec:
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+      
+      containers:
+      - name: qdrant
+        image: qdrant/qdrant:v1.8.0
+        imagePullPolicy: IfNotPresent
+        
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+        
+        ports:
+        - containerPort: 6333
+          name: http
+          protocol: TCP
+        - containerPort: 6334
+          name: grpc
+          protocol: TCP
+        
+        env:
+        - name: QDRANT__LOG_LEVEL
+          value: "INFO"
+        - name: QDRANT__SERVICE__ENABLE_TLS
+          value: "false"
+        - name: QDRANT__SERVICE__HTTP_PORT
+          value: "6333"
+        - name: QDRANT__SERVICE__GRPC_PORT
+          value: "6334"
+        - name: QDRANT__STORAGE__ENGINE
+          value: "rocksdb"
+        - name: QDRANT__STORAGE__ROCKSDB__COMPRESSION_TYPE
+          value: "lz4"
+        - name: QDRANT__MEMORY__MAP_SIZE
+          value: "8GB"
+        
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "8Gi"
+            cpu: "2"
+        
+        volumeMounts:
+        - name: qdrant-data
+          mountPath: /qdrant/storage
+        
+        livenessProbe:
+          httpGet:
+            path: /readyz
+            port: 6333
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 6333
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 1
+        
+        startupProbe:
+          httpGet:
+            path: /readyz
+            port: 6333
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 10
+      
+      volumes:
+      - name: qdrant-data
+        persistentVolumeClaim:
+          claimName: smart-ao-qdrant-pvc
+      
+      nodeSelector:
+        kubernetes.io/os: linux
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: component
+                  operator: In
+                  values:
+                  - qdrant
+              topologyKey: kubernetes.io/hostname
+      
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+
+---
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: smart-ao-qdrant-pdb
+  namespace: smart-ao-v7
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: smart-ao
+      component: qdrant

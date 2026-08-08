@@ -1,4 +1,15 @@
 """
+SMART_AO V7 - base_agent.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - BaseAgent - Contrat unique opposable
 Source: ARCHITECTURE_V7_ENGINE.md §2 + ENGINEERING-HANDBOOK V7 ADR-044
 
@@ -13,7 +24,7 @@ Règles opposables:
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Any
 from datetime import timedelta
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 import re
 
 # Regex ZERO € - bloquant si trouvé dans findings
@@ -31,21 +42,22 @@ class AgentInput(BaseModel):
     context: Dict[str, Any] = Field(default_factory=dict, description="Vault A01-A12, estimation_interne, projet, etc.")
     previous_outputs: Dict[str, "AgentOutput"] = Field(default_factory=dict, description="Outputs agents dépendants {capability: AgentOutput}")
 
-    class Config:
-        extra = "allow"  # Permet contexte riche
+    model_config = ConfigDict(extra="allow")  # Permet contexte riche
 
 
 class AgentOutput(BaseModel):
     """
     Output standardisé V7 - ZERO € garanti par type
-    INTERDIT: tout champ €, marge, coeff, BFR
+    INTERDIT: tout champ €, marge, coeff, BFR dans findings
+    financial_data: Dict optionnel pour données financières (accès restreint RBAC)
     """
     agent_name: str
     mission_id: str
     capability: str = Field(..., description="Capabilité principale traitée")
     confidence: float = Field(ge=0.0, le=1.0, description="Confiance IA 0-1")
     status: str = Field(..., pattern="^(SUCCESS|PARTIAL|FAILED|SKIPPED)$")
-    findings: List[Dict[str, Any]] = Field(default_factory=list, description="JSON quali ZERO €")
+    findings: List[Dict[str, Any]] = Field(default_factory=list, description="JSON quali ZERO € - INTERDIT: €, marge, coeff, BFR")
+    financial_data: Optional[Dict[str, Any]] = Field(default=None, description="Données financières pour Math Engine - accès RBAC patron uniquement")
     warnings: List[str] = Field(default_factory=list)
     execution_time_ms: int = Field(default=0)
     source_pages: List[int] = Field(default_factory=list, description="Traçabilité pages sources")
@@ -56,8 +68,6 @@ class AgentOutput(BaseModel):
         """Garde-fou ZERO € - bloque si € détecté dans findings"""
         payload_str = str(v)
         if EURO_REGEX.search(payload_str):
-            # On log mais ne bloque pas en prod, test bloquant fera échouer
-            # Pour V7 strict, on lève
             raise ValueError(f"ZERO € violation: findings contient €/marge/BFR interdit: {payload_str[:200]}")
         return v
 

@@ -1,0 +1,62 @@
+# =============================================================================
+# SMART_AO V7 - Redis Service
+# =============================================================================
+# Service ClusterIP pour accéder à Redis depuis d'autres pods
+# Build 9 - Phase 5 - Gate 9
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: smart-ao-redis
+  namespace: smart-ao-v7
+  labels:
+    app: smart-ao
+    component: redis
+    version: v7
+    build: "9"
+    tier: cache
+  annotations:
+    description: "Service Redis pour le caching SMART_AO V7"
+
+spec:
+  selector:
+    app: smart-ao
+    component: redis
+  
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+    protocol: TCP
+  
+  type: ClusterIP
+  clusterIP: None
+
+---
+
+# Service Headless pour DNS direct aux pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: smart-ao-redis-headless
+  namespace: smart-ao-v7
+  labels:
+    app: smart-ao
+    component: redis
+    version: v7
+    build: "9"
+    tier: cache
+
+spec:
+  selector:
+    app: smart-ao
+    component: redis
+  
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+    protocol: TCP
+  
+  type: ClusterIP
+  clusterIP: None

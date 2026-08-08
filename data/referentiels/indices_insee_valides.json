@@ -1,0 +1,88 @@
+{
+  "version": "2026-01",
+  "description": "Indices INSEE valides pour les formules de révision des marchés publics de BTP",
+  "base_fixation": {
+    "min": "2020-01-01",
+    "max": "2026-12-31"
+  },
+  "indices": {
+    "BT01": {
+      "nom": "Indice du coût de la construction",
+      "famille": "Bâtiment",
+      "periodicite": "mensuelle",
+      "valide_depuis": "1974-01-01"
+    },
+    "BT02": {
+      "nom": "Indice du coût de la construction - Main-d'œuvre",
+      "famille": "Bâtiment",
+      "periodicite": "mensuelle",
+      "valide_depuis": "1974-01-01"
+    },
+    "BT03": {
+      "nom": "Indice du coût de la construction - Matériaux",
+      "famille": "Bâtiment",
+      "periodicite": "mensuelle",
+      "valide_depuis": "1974-01-01"
+    },
+    "BT06a": {
+      "nom": "Indice des travaux routiers",
+      "famille": "TP",
+      "periodicite": "mensuelle",
+      "valide_depuis": "1974-01-01"
+    },
+    "BT07": {
+      "nom": "Indice des travaux ferroviaires",
+      "famille": "TP",
+      "periodicite": "mensuelle",
+      "valide_depuis": "1974-01-01"
+    },
+    "BT08": {
+      "nom": "Indice des travaux fluviaux",
+      "famille": "TP",
+      "periodicite": "mensuelle",
+      "valide_depuis": "1974-01-01"
+    },
+    "BT09": {
+      "nom": "Indice des travaux maritimes",
+      "famille": "TP",
+      "periodicite": "mensuelle",
+      "valide_depuis": "1974-01-01"
+    },
+    "BT10": {
+      "nom": "Indice des travaux aériens",
+      "famille": "TP",
+      "periodicite": "mensuelle",
+      "valide_depuis": "1974-01-01"
+    },
+    "TP01": {
+      "nom": "Indice des travaux publics",
+      "famille": "TP",
+      "periodicite": "mensuelle",
+      "valide_depuis": "1974-01-01"
+    },
+    "FM0B": {
+      "nom": "Indice des prix à la production de l'industrie française - marchés français",
+      "famille": "Matériaux",
+      "periodicite": "mensuelle",
+      "valide_depuis": "2000-01-01"
+    },
+    "FM1E": {
+      "nom": "Production de l'industrie française - Produits métalliques",
+      "famille": "Matériaux",
+      "periodicite": "mensuelle",
+      "valide_depuis": "2000-01-01"
+    },
+    "FM3A": {
+      "nom": "Production de l'industrie française - Matériaux de construction",
+      "famille": "Matériaux",
+      "periodicite": "mensuelle",
+      "valide_depuis": "2000-01-01"
+    }
+  },
+  "regles_validation": {
+    "somme_coefficients_tolerance": 0.001,
+    "date_base_obligatoire": true,
+    "date_base_min": "2020-01-01",
+    "date_base_max": "2026-12-31"
+  }
+}

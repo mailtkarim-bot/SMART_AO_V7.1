@@ -1,0 +1,176 @@
+# =============================================================================
+# SMART_AO V7 - Redis Deployment
+# =============================================================================
+# Déploiement de Redis pour le caching et la gestion de session
+# Build 9 - Phase 5 - Gate 9
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smart-ao-redis
+  namespace: smart-ao-v7
+  labels:
+    app: smart-ao
+    component: redis
+    version: v7
+    build: "9"
+    tier: cache
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smart-ao
+      component: redis
+  
+  strategy:
+    type: Recreate
+    rollingUpdate: null
+  
+  template:
+    metadata:
+      labels:
+        app: smart-ao
+        component: redis
+        version: v7
+        build: "9"
+        tier: cache
+    
+    spec:
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+      
+      containers:
+      - name: redis
+        image: redis:7.2-alpine
+        imagePullPolicy: IfNotPresent
+        
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+        
+        ports:
+        - containerPort: 6379
+          name: redis
+          protocol: TCP
+        
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: smart-ao-secrets
+              key: REDIS_PASSWORD
+        - name: REDIS_MAXMEMORY
+          value: "2gb"
+        - name: REDIS_MAXMEMORY_POLICY
+          value: "allkeys-lru"
+        - name: REDIS_appendonly
+          value: "yes"
+        - name: REDIS_appendfilename
+          value: "appendonly.aof"
+        - name: REDIS_save
+          value: "900 1 300 10 60 10000"
+        
+        args:
+        - redis-server
+        - /usr/local/etc/redis/redis.conf
+        
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1"
+        
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        - name: redis-config
+          mountPath: /usr/local/etc/redis/redis.conf
+          subPath: redis.conf
+        
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 1
+        
+        startupProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 10
+      
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: smart-ao-redis-pvc
+      - name: redis-config
+        configMap:
+          name: smart-ao-redis-config
+          items:
+          - key: redis.conf
+            path: redis.conf
+      
+      nodeSelector:
+        kubernetes.io/os: linux
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: component
+                  operator: In
+                  values:
+                  - redis
+              topologyKey: kubernetes.io/hostname
+      
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+
+---
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: smart-ao-redis-pdb
+  namespace: smart-ao-v7
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: smart-ao
+      component: redis

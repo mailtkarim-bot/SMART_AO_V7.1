@@ -1,3 +1,14 @@
+"""
+SMART_AO V7 - setup.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
 from setuptools import setup, find_packages
 
 setup(
@@ -18,12 +29,14 @@ setup(
         "pulp>=2.8.0",
         "ortools>=9.9.0",
         # API & Web (V7)
-        "fastapi>=0.109.0",
+        "fastapi>=0.120.0",
         "sqlalchemy>=2.0.25",
         "uvicorn>=0.27.0",
         "python-multipart>=0.0.6",
+        "streamlit>=1.30.0",
         # Knowledge Engine (V7)
         "qdrant-client>=1.8.0",
+        "sentence-transformers>=2.5.0",
         # Security & Auth (V7)
         "pyjwt>=2.8.0",
         "argon2-cffi>=23.1.0",

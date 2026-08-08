@@ -1,0 +1,12 @@
+# UI Configuration
+server:
+  headless: true
+  host: 0.0.0.0
+  port: 8501
+
+theme:
+  primary_color: "#1f77b4"
+  background_color: "#ffffff"
+  secondary_background_color: "#f0f2f6"
+  text_color: "#31333F"
+  font: "sans serif"

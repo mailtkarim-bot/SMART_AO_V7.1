@@ -1,5 +1,16 @@
 """
 SMART_AO V7 - 0017_mission_v7.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
+SMART_AO V7 - 0017_mission_v7.py
 =========================
 Migration for Mission, MissionStep, and MissionEvent models
 Source: ARCHITECTURE_V7_ENGINE.md §4.1
@@ -29,14 +40,15 @@ def upgrade():
         sa.Column('name', sa.String(length=255), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('status', sa.String(length=16), nullable=False, default='CREATED'),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now(), onupdate=sa.func.now()),
-        sa.Column('completed_at', sa.DateTime(), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now(), onupdate=sa.func.now()),
+        sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('total_steps', sa.Integer(), nullable=False, default=0),
         sa.Column('completed_steps', sa.Integer(), nullable=False, default=0),
         sa.Column('error_message', sa.Text(), nullable=True),
         sa.Column('extra_metadata', sa.JSON(), nullable=True, default={}),
-        sa.Column('project_id', sa.Integer(), nullable=True),
+        sa.Column('project_id', sa.String(length=64), nullable=True),
+        sa.ForeignKeyConstraint(['project_id'], ['projects.project_id'], ondelete='SET NULL'),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('mission_id', name='uq_mission_id'),
         sa.Index('idx_mission_status', 'status'),
@@ -54,8 +66,8 @@ def upgrade():
         sa.Column('input_data', sa.JSON(), nullable=True, default={}),
         sa.Column('output_data', sa.JSON(), nullable=True, default={}),
         sa.Column('error_message', sa.Text(), nullable=True),
-        sa.Column('started_at', sa.DateTime(), nullable=True),
-        sa.Column('completed_at', sa.DateTime(), nullable=True),
+        sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('agent_name', sa.String(length=128), nullable=True),
         sa.Column('execution_time_ms', sa.Float(), nullable=True),
         sa.PrimaryKeyConstraint('id'),
@@ -72,7 +84,7 @@ def upgrade():
         sa.Column('step_id', sa.Integer(), nullable=True),
         sa.Column('event_type', sa.String(length=128), nullable=False),
         sa.Column('data', sa.JSON(), nullable=True, default={}),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(['mission_id'], ['missions.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['step_id'], ['mission_steps.id'], ondelete='CASCADE'),

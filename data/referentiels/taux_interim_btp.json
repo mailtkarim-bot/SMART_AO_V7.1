@@ -1,0 +1,80 @@
+{
+  "version": "2026-01",
+  "unite": "EUR/heure",
+  "description": "Taux horaires moyens intérim BTP par métier et région, charges comprises",
+  "taux": {
+    "coffreur": {
+      "base": 22.50,
+      "nuit": 28.50,
+      "weekend": 31.00,
+      "regions": {
+        "IDF": 24.50,
+        "PACA": 23.00,
+        "Auvergne-Rhone-Alpes": 22.50,
+        "default": 22.50
+      }
+    },
+    "macon": {
+      "base": 21.00,
+      "nuit": 26.50,
+      "weekend": 29.00,
+      "regions": {
+        "IDF": 23.00,
+        "PACA": 21.50,
+        "default": 21.00
+      }
+    },
+    "electricien": {
+      "base": 23.50,
+      "nuit": 29.50,
+      "weekend": 32.50,
+      "regions": {
+        "IDF": 25.50,
+        "PACA": 24.50,
+        "default": 23.50
+      }
+    },
+    "plombier": {
+      "base": 23.00,
+      "nuit": 29.00,
+      "weekend": 32.00,
+      "regions": {
+        "IDF": 25.00,
+        "default": 23.00
+      }
+    },
+    "peintre": {
+      "base": 19.50,
+      "nuit": 24.50,
+      "weekend": 27.00,
+      "regions": {
+        "IDF": 21.00,
+        "default": 19.50
+      }
+    },
+    "manoeuvre": {
+      "base": 17.50,
+      "nuit": 22.00,
+      "weekend": 24.50,
+      "regions": {
+        "IDF": 19.00,
+        "default": 17.50
+      }
+    },
+    "chef_equipe": {
+      "base": 26.00,
+      "nuit": 32.50,
+      "weekend": 36.00,
+      "regions": {
+        "IDF": 28.50,
+        "default": 26.00
+      }
+    }
+  },
+  "coeff_majoration": {
+    "penibilite_standard": 1.35,
+    "penibilite_elevee": 1.45,
+    "nuit": 1.25,
+    "weekend": 1.35
+  }
+}

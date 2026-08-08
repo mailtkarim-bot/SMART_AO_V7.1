@@ -1,48 +1,80 @@
 """
+SMART_AO V7 - database.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Database Configuration
 ===================================
 PostgreSQL persistence layer for Mission, Events, and Vault
 Source: ARCHITECTURE_V7_ENGINE.md §4
 """
 
-import os
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+from sqlalchemy.pool import NullPool
+from app.core.config import settings
 
 # =============================================================================
 # DATABASE CONFIGURATION
 # =============================================================================
 
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_NAME = os.getenv("DB_NAME", "smart_ao_v7")
-DB_USER = os.getenv("DB_USER", "smart_ao")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "your_secure_password")
-DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "20"))
-DB_POOL_MAX_OVERFLOW = int(os.getenv("DB_POOL_MAX_OVERFLOW", "10"))
-DB_ECHO = os.getenv("DB_ECHO", "False").lower() == "true"
+# Utiliser les paramètres depuis la configuration centrale (SSoT)
+# Si DATABASE_URL est fourni, l'utiliser directement
+if settings.DATABASE_URL:
+    DATABASE_URL = settings.DATABASE_URL
+else:
+    # Sinon, construire à partir des composants
+    if not all([settings.DB_HOST, settings.DB_PORT, settings.DB_NAME, settings.DB_USER, settings.DB_PASSWORD]):
+        missing_vars = []
+        if not settings.DB_HOST:
+            missing_vars.append("DB_HOST")
+        if not settings.DB_PORT:
+            missing_vars.append("DB_PORT")
+        if not settings.DB_NAME:
+            missing_vars.append("DB_NAME")
+        if not settings.DB_USER:
+            missing_vars.append("DB_USER")
+        if not settings.DB_PASSWORD:
+            missing_vars.append("DB_PASSWORD")
+        raise ValueError(f"Variables d'environnement manquantes pour la base de données: {', '.join(missing_vars)}")
+    
+    DATABASE_URL = f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
 
-# =============================================================================
-# SQLALCHEMY SETUP
-# =============================================================================
+# Pool configuration depuis settings
+DB_POOL_SIZE = settings.DATABASE_POOL_SIZE
+DB_POOL_MAX_OVERFLOW = settings.DATABASE_MAX_OVERFLOW
+DB_ECHO = settings.DB_ECHO
 
-# Database URL
-DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# En environnement de test, désactiver le pooling pour éviter les conflits
+# d'event loop entre TestClient (sync) et asyncpg.
+IS_TEST_ENV = settings.APP_ENVIRONMENT.lower() == "test"
+
+# Arguments communs
+engine_kwargs = {
+    "echo": DB_ECHO,
+    "pool_recycle": 3600,
+}
+
+if IS_TEST_ENV:
+    # Désactiver le pooling pour éviter les conflits d'event loop en test
+    engine_kwargs["poolclass"] = NullPool
+else:
+    engine_kwargs.update({
+        "pool_size": DB_POOL_SIZE,
+        "max_overflow": DB_POOL_MAX_OVERFLOW,
+        "pool_pre_ping": True,
+    })
 
 # Async engine
-engine = create_async_engine(
-    DATABASE_URL,
-    pool_size=DB_POOL_SIZE,
-    max_overflow=DB_POOL_MAX_OVERFLOW,
-    echo=DB_ECHO,
-    pool_pre_ping=True,
-    pool_recycle=3600,
-)
+engine = create_async_engine(DATABASE_URL, **engine_kwargs)
 
 # Session factory
 async_session_maker = async_sessionmaker(
@@ -83,9 +115,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def test_db_connection() -> bool:
     """Test database connection"""
+    from sqlalchemy import text
     try:
         async with engine.begin() as conn:
-            await conn.execute("SELECT 1")
+            await conn.execute(text("SELECT 1"))
             return True
     except Exception as e:
         print(f"❌ Database connection failed: {e}")

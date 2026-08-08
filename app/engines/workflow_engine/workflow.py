@@ -1,20 +1,35 @@
 """
+SMART_AO V7 - workflow.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Workflow Engine - Tour de contrôle
 Source: ARCHITECTURE_V7_ENGINE.md §4 + ADR-041 + ADR-054
 
-Ne fait rien lui-même. Il dit:
-- Étape 1: Parser -> terminé -> event DocumentAnalysé
-- Étape 2: Extraction -> terminé -> event EntitésExtraites
-- Étape 3: Classification -> "Ce DCE contient risques financiers..."
-- Étape 4: Il demande au Registry "qui sait traiter risque financier ?"
-- Étape 5: Compilation
-- Étape 6: Rapport final
+Tour de contrôle principal - 6 étapes canoniques V7:
+- Étape 1: PARSER -> terminé -> event DocumentAnalysé
+- Étape 2: EXTRACTION -> terminé -> event EntitésExtraites
+- Étape 3: CLASSIFICATION -> "Ce DCE contient risques financiers..."
+- Étape 4: AGENTS -> Exécution parallèle des agents pertinents
+- Étape 5: COMPILATION -> Agrégation des résultats
+- Étape 6: RAPPORT -> Génération du rapport et double artefact HANDOFF+
+
+Le Workflow Engine ne fait RIEN lui-même. Il délègue à chaque Engine spécialisé.
+Les étapes métier post-analyse (validation humaine, signature électronique,
+archivage légal, intégration ERP) sont hors périmètre de ce moteur.
 """
 
 from typing import List, Dict, Optional, Any
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app.engines.workflow_engine.mission import Mission, MissionStatus, MissionStep, StepStatus
@@ -25,11 +40,76 @@ from app.agents.base_agent import AgentInput, AgentOutput
 logger = logging.getLogger(__name__)
 
 
+class WorkflowStep:
+    """Représente une étape dans un workflow."""
+    def __init__(self, name: str, step_number: int, status: StepStatus = StepStatus.PENDING, step_name: str = None):
+        self.name = name
+        self.step_name = step_name if step_name is not None else name  # Alias pour compatibilité avec les tests
+        self.step_number = step_number
+        self.status = status
+
+
+class Workflow:
+    """
+    Représente un workflow pour une mission spécifique.
+    Contient les 6 étapes canoniques du workflow V7.
+    
+    Source: ARCHITECTURE_V7_ENGINE.md §4 + ADR-041 + ADR-044
+    
+    Les 6 étapes canoniques:
+    1. PARSER - Parsing des documents DCE
+    2. EXTRACTION - Extraction des entités (SIRET, dates, montants)
+    3. CLASSIFICATION - Classification des risques et besoins
+    4. AGENTS - Exécution parallèle des agents IA
+    5. COMPILATION - Agrégation des résultats
+    6. RAPPORT - Génération du rapport initial et double artefact HANDOFF+
+    """
+    
+    # Noms des 6 étapes canoniques V7
+    STANDARD_STEPS = [
+        "parser_step",
+        "extraction_step",
+        "classification_step",
+        "agents_step",
+        "compilation_step",
+        "rapport_step",
+    ]
+    
+    def __init__(self, mission: Mission):
+        self.mission = mission
+        self.mission_id = mission.id
+        self.status = "PENDING"
+        self.current_step = 0
+        
+        # Créer les 6 étapes canoniques
+        self.steps = []
+        for i, step_name in enumerate(self.STANDARD_STEPS):
+            step = WorkflowStep(
+                name=step_name.upper().replace("_", ""),
+                step_name=step_name,  # Garder le nom original pour le test
+                step_number=i,
+                status=StepStatus.PENDING
+            )
+            self.steps.append(step)
+    
+    def get_current_step(self):
+        """Récupérer l'étape courante."""
+        if 0 <= self.current_step < len(self.steps):
+            return self.steps[self.current_step]
+        return None
+    
+    def advance(self):
+        """Avancer à l'étape suivante."""
+        if self.current_step < len(self.steps) - 1:
+            self.current_step += 1
+
+
 class WorkflowEngine:
     """
     Tour de contrôle V7 - Kernel OS
     Persistance PG missions + mission_steps
     Parallelisation contrôlée semaphore 6 max pour 16Go RAM
+    Gestion des 6 étapes canoniques d'analyse DCE
     """
 
     def __init__(self, registry: AgentRegistry, event_bus: EventBus, max_parallel: int = 6):
@@ -47,18 +127,20 @@ class WorkflowEngine:
             priority=priority,
         )
         await self.persist(mission)
-        await self.event_bus.publish(Event(
-            type="MissionCréée",
+        # Publier événement MissionCreated (méthode synchrone, pas de await)
+        from app.engines.event_bus.models import MissionCreated
+        self.event_bus.publish(MissionCreated(
             mission_id=mission.id,
-            payload={"docs": len(docs), "project_id": project_id},
-            source="WorkflowEngine"
+            project_id=project_id,
+            mission_type=context.get("mission_type", "UNKNOWN"),
+            context=context
         ))
         logger.info(f"Mission {mission.id} created with {len(docs)} docs")
         return mission
 
     async def persist(self, mission: Mission):
         """En prod: UPSERT PG. Ici: log + mémoire"""
-        mission.updated_at = datetime.utcnow()
+        mission.updated_at = datetime.now(timezone.utc)
         # TODO prod: await db.execute("INSERT INTO missions ... ON CONFLICT UPDATE")
         logger.debug(f"Persisted mission {mission.id} status={mission.status}")
 
@@ -76,9 +158,9 @@ class WorkflowEngine:
                 try:
                     await self.execute_step(mission, step)
                     step.status = StepStatus.DONE
-                    step.ended_at = datetime.utcnow()
-                    await self.event_bus.publish(Event(
-                        type=f"{step.name}Terminé",
+                    step.ended_at = datetime.now(timezone.utc)
+                    self.event_bus.publish(Event(
+                        f"{step.name}Terminé",
                         mission_id=mission.id,
                         payload={"step": step.name, "duration_ms": step.duration_ms},
                         source="WorkflowEngine"
@@ -86,14 +168,14 @@ class WorkflowEngine:
                 except Exception as e:
                     step.status = StepStatus.FAILED
                     step.error = str(e)
-                    step.ended_at = datetime.utcnow()
+                    step.ended_at = datetime.now(timezone.utc)
                     logger.error(f"Step {step.name} failed mission {mission.id}: {e}")
 
                     if self._is_blocking_step(step.name):
                         mission.status = MissionStatus.FAILED
                         await self.persist(mission)
-                        await self.event_bus.publish(Event(
-                            type="MissionÉchouée",
+                        self.event_bus.publish(Event(
+                            "MissionÉchouée",
                             mission_id=mission.id,
                             payload={"error": str(e), "step": step.name},
                             source="WorkflowEngine"
@@ -105,8 +187,8 @@ class WorkflowEngine:
 
             mission.status = MissionStatus.DONE
             await self.persist(mission)
-            await self.event_bus.publish(Event(
-                type="AnalyseTerminée",
+            self.event_bus.publish(Event(
+                "AnalyseTerminée",
                 mission_id=mission.id,
                 payload={"total_steps": len(mission.workflow)},
                 source="WorkflowEngine"
@@ -136,10 +218,11 @@ class WorkflowEngine:
 
     async def execute_step(self, mission: Mission, step: MissionStep):
         """
-        Dispatch par step
+        Dispatch par step - 6 étapes canoniques V7.1
+        PARSER / EXTRACTION / CLASSIFICATION / AGENTS / COMPILATION / RAPPORT
         """
         step.status = StepStatus.RUNNING
-        step.started_at = datetime.utcnow()
+        step.started_at = datetime.now(timezone.utc)
         logger.info(f"Executing step {step.name} mission {mission.id}")
 
         if step.name == "PARSER":
@@ -159,11 +242,11 @@ class WorkflowEngine:
 
     async def _run_parser(self, mission: Mission, step: MissionStep):
         # Délègue à Document Engine
-        # En prod: from ..document_engine import DocumentEngine
+        # Délègue à Document Engine via import absolu en production
         await asyncio.sleep(0.1)  # Simule parsing 412 pages
         mission.context["parsed_pages"] = 412
-        await self.event_bus.publish(Event(
-            type="DocumentAnalysé",
+        self.event_bus.publish(Event(
+            "DocumentAnalysé",
             mission_id=mission.id,
             payload={"pages": 412, "duree_parse": "3.2s", "chunks": 1240},
             source="DocumentEngine"
@@ -173,8 +256,8 @@ class WorkflowEngine:
         # Délègue à Knowledge Engine
         await asyncio.sleep(0.05)
         mission.context["adn_extracted"] = True
-        await self.event_bus.publish(Event(
-            type="EntitésExtraites",
+        self.event_bus.publish(Event(
+            "EntitésExtraites",
             mission_id=mission.id,
             payload={"traps": 12, "adn_local": "<50km"},
             source="KnowledgeEngine"
@@ -200,8 +283,8 @@ class WorkflowEngine:
             needed.append("BOOSTER_RSE")
 
         mission.context["needed_capabilities"] = needed
-        await self.event_bus.publish(Event(
-            type="ClassificationTerminée",
+        self.event_bus.publish(Event(
+            "ClassificationTerminée",
             mission_id=mission.id,
             payload={"needed_capabilities": needed},
             source="WorkflowEngine"
@@ -282,14 +365,14 @@ class WorkflowEngine:
         """
         timeout = agent.estimated_duration.total_seconds() * 2 + 10
 
-        await self.event_bus.publish(Event(
-            type="AgentDémarré",
+        self.event_bus.publish(Event(
+            "AgentDémarré",
             mission_id=mission.id,
             payload={"agent": agent.name, "capabilities": agent.capabilities},
             source="AgentRuntime"
         ))
 
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
         try:
             # Construction AgentInput
             agent_input = AgentInput(
@@ -305,15 +388,15 @@ class WorkflowEngine:
                 timeout=timeout
             )
 
-            output.execution_time_ms = int((datetime.utcnow() - start).total_seconds() * 1000)
+            output.execution_time_ms = int((datetime.now(timezone.utc) - start).total_seconds() * 1000)
 
             # Vérif blocking
             if output.status == "FAILED" and agent.is_blocking:
                 logger.error(f"Blocking agent {agent.name} failed -> Mission FAILED")
                 raise RuntimeError(f"Blocking agent {agent.name} failed")
 
-            await self.event_bus.publish(Event(
-                type="AgentTerminé",
+            self.event_bus.publish(Event(
+                "AgentTerminé",
                 mission_id=mission.id,
                 payload={"agent": agent.name, "status": output.status, "confidence": output.confidence},
                 source="AgentRuntime"
@@ -323,8 +406,8 @@ class WorkflowEngine:
 
         except asyncio.TimeoutError:
             logger.error(f"Agent {agent.name} timeout {timeout}s mission {mission.id}")
-            await self.event_bus.publish(Event(
-                type="AgentTerminé",
+            self.event_bus.publish(Event(
+                "AgentTerminé",
                 mission_id=mission.id,
                 payload={"agent": agent.name, "status": "FAILED", "error": "timeout"},
                 source="AgentRuntime"
@@ -344,8 +427,8 @@ class WorkflowEngine:
         # Agrège AgentOutput + Math Engine
         await asyncio.sleep(0.05)
         mission.context["compilation_done"] = True
-        await self.event_bus.publish(Event(
-            type="CompilationTerminée",
+        self.event_bus.publish(Event(
+            "CompilationTerminée",
             mission_id=mission.id,
             payload={"agents": mission.context.get("agents_executed", 0)},
             source="WorkflowEngine"
@@ -355,3 +438,11 @@ class WorkflowEngine:
         # Génère double artefact HANDOFF+
         await asyncio.sleep(0.05)
         mission.context["rapport_generated"] = True
+        self.event_bus.publish(Event(
+            "RapportTerminé",
+            mission_id=mission.id,
+            payload={"pages": mission.context.get("rapport_pages", 0)},
+            source="WorkflowEngine"
+        ))
+
+

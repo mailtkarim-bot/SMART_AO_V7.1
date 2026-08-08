@@ -1,4 +1,15 @@
 """
+SMART_AO V7 - agent_variante.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Variante Guardian Agent
 Source: ARCHITECTURE_V7_ENGINE.md §2 + ADR-044 + RAPPORT (1).md §7.17
 
@@ -34,21 +45,30 @@ class VarianteGuardianAgent(BaseAgent):
     async def execute(self, input: AgentInput) -> AgentOutput:
         chunks = input.dce_chunks
         findings = []
+        financial_data = {}
         
         variantes = input.context.get("variantes", [])
         
         if variantes:
-            for variante in variantes:
+            for idx, variante in enumerate(variantes):
                 impact_cout = variante.get("impact_cout", 0)
                 impact_delai = variante.get("impact_delai", 0)
+                
+                # Stocker dans financial_data
+                if impact_cout != 0 or impact_delai != 0:
+                    financial_data[f"variante_{idx}"] = {
+                        "description": variante.get("description", ""),
+                        "impact_cout": impact_cout,
+                        "impact_delai": impact_delai
+                    }
                 
                 if impact_cout < 0 and impact_delai < 0:
                     findings.append({
                         "type": "VARIANTE_AVANTAGEUSE",
                         "niveau": "ELEVE",
                         "description": variante.get("description", ""),
-                        "economie": f"{abs(impact_cout):.2f} EUR",
                         "gain_delai": f"{abs(impact_delai)} jours",
+                        "details": "Variante avantageuse detectee (voir financial_data)",
                         "recommandation": "Adopter cette variante"
                     })
                 elif impact_cout < 0:
@@ -56,7 +76,7 @@ class VarianteGuardianAgent(BaseAgent):
                         "type": "VARIANTE_ECONOMIQUE",
                         "niveau": "MOYEN",
                         "description": variante.get("description", ""),
-                        "economie": f"{abs(impact_cout):.2f} EUR"
+                        "details": "Variante economique detectee (voir financial_data)"
                     })
         
         variante_keywords = ["variante", "option", "alternative", "impact", "coût"]
@@ -85,6 +105,7 @@ class VarianteGuardianAgent(BaseAgent):
             confidence=0.90,
             status="SUCCESS",
             findings=findings,
+            financial_data=financial_data if financial_data else None,
             source_pages=[1, 5, 10],
             execution_time_ms=0
         )

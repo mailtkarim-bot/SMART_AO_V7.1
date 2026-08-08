@@ -1,3 +1,14 @@
+"""
+SMART_AO V7 - run_test.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
 #!/usr/bin/env python3
 """Script pour tester rapidement le setup V7"""
 import sys
@@ -110,7 +121,7 @@ async def test_e2e():
         
         # Vérifier que les agents ont bien été exécutés
         events = await bus.replay(mission.id)
-        agent_events = [e for e in events if e.type in ["AgentDémarré", "AgentTerminé"]]
+        agent_events = [e for e in events if e.metadata.get("legacy_type") in ["AgentDémarré", "AgentTerminé"]]
         print(f"   Events agents: {len(agent_events)}")
         
         return True

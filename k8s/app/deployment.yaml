@@ -1,0 +1,261 @@
+# =============================================================================
+# SMART_AO V7 - Application Deployment
+# =============================================================================
+# Déploiement principal de l'application SMART_AO V7
+# Build 9 - Phase 5 - Gate 9
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smart-ao-app
+  namespace: smart-ao-v7
+  labels:
+    app: smart-ao
+    component: app
+    version: v7
+    build: "9"
+    tier: application
+
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: smart-ao
+      component: app
+  
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 15%
+  
+  template:
+    metadata:
+      labels:
+        app: smart-ao
+        component: app
+        version: v7
+        build: "9"
+        tier: application
+    
+    spec:
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+      
+      containers:
+      - name: smart-ao-app
+        image: smart-ao-v7:build-9
+        imagePullPolicy: IfNotPresent
+        
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+        
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        - containerPort: 8001
+          name: health
+          protocol: TCP
+        
+        envFrom:
+        - configMapRef:
+            name: smart-ao-app-config
+        - secretRef:
+            name: smart-ao-secrets
+        
+        env:
+        # PostgreSQL
+        - name: DB_HOST
+          value: "smart-ao-postgres"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "smart_ao_v7"
+        - name: DB_USER
+          value: "smart_ao"
+        
+        # Redis
+        - name: REDIS_HOST
+          value: "smart-ao-redis"
+        - name: REDIS_PORT
+          value: "6379"
+        
+        # Qdrant
+        - name: QDRANT_HOST
+          value: "smart-ao-qdrant"
+        - name: QDRANT_PORT
+          value: "6333"
+        
+        # Application
+        - name: APP_ENV
+          value: "production"
+        - name: APP_VERSION
+          value: "7.9.0"
+        - name: APP_DEBUG
+          value: "false"
+        - name: APP_LOG_LEVEL
+          value: "INFO"
+        - name: APP_WORKERS
+          value: "4"
+        - name: APP_TIMEOUT
+          value: "300"
+        
+        # API
+        - name: API_HOST
+          value: "0.0.0.0"
+        - name: API_PORT
+          value: "8000"
+        - name: API_PREFIX
+          value: "/api/v1"
+        - name: API_CORS_ORIGINS
+          value: "http://localhost:3000,http://localhost:8080,https://smart-ao-v7.com"
+        
+        # Sécurité
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: smart-ao-secrets
+              key: JWT_SECRET_KEY
+        - name: JWT_ALGORITHM
+          value: "HS256"
+        - name: JWT_EXPIRE_MINUTES
+          value: "30"
+        
+        # Rate Limiting
+        - name: RATE_LIMIT_ENABLED
+          value: "true"
+        - name: RATE_LIMIT_REQUESTS
+          value: "100"
+        - name: RATE_LIMIT_WINDOW
+          value: "60"
+        
+        # Circuit Breakers
+        - name: CB_ENABLED
+          value: "true"
+        - name: CB_FAILURE_THRESHOLD
+          value: "5"
+        - name: CB_SUCCESS_THRESHOLD
+          value: "2"
+        - name: CB_TIMEOUT_SECONDS
+          value: "60"
+        
+        # Workflow
+        - name: WORKFLOW_MAX_CONCURRENT
+          value: "10"
+        - name: WORKFLOW_TIMEOUT_MINUTES
+          value: "30"
+        
+        # Agents
+        - name: AGENT_TIMEOUT_SECONDS
+          value: "120"
+        - name: AGENT_MAX_RETRIES
+          value: "3"
+        
+        # Upload
+        - name: UPLOAD_MAX_SIZE_MB
+          value: "50"
+        - name: UPLOAD_ALLOWED_EXTENSIONS
+          value: ".pdf,.docx,.xlsx,.txt,.json"
+        
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+        
+        volumeMounts:
+        - name: app-data
+          mountPath: /app/data
+        - name: app-logs
+          mountPath: /app/logs
+        - name: app-config
+          mountPath: /app/config/custom.yaml
+          subPath: custom.yaml
+        
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health/ready
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 1
+        
+        startupProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 10
+      
+      volumes:
+      - name: app-data
+        persistentVolumeClaim:
+          claimName: smart-ao-app-pvc
+      - name: app-logs
+        emptyDir: {}
+      - name: app-config
+        configMap:
+          name: smart-ao-app-config
+          items:
+          - key: custom.yaml
+            path: custom.yaml
+      
+      nodeSelector:
+        kubernetes.io/os: linux
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: component
+                  operator: In
+                  values:
+                  - app
+              topologyKey: kubernetes.io/hostname
+      
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+
+---
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: smart-ao-app-pdb
+  namespace: smart-ao-v7
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: smart-ao
+      component: app

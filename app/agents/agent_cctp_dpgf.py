@@ -1,4 +1,15 @@
 """
+SMART_AO V7 - agent_cctp_dpgf.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - CCTP/DPGF Agent
 Source: ARCHITECTURE_V7_ENGINE.md §2 + ADR-044 + RAPPORT (1).md §7.9
 
@@ -35,6 +46,7 @@ class CCTPDPGFAgent(BaseAgent):
     async def execute(self, input: AgentInput) -> AgentOutput:
         chunks = input.dce_chunks
         findings = []
+        financial_data = {}
         
         cctp_data = input.context.get("cctp", {})
         dpgf_data = input.context.get("dpgf", {})
@@ -73,17 +85,24 @@ class CCTPDPGFAgent(BaseAgent):
                     if quantite_cctp > 0 and prix_unitaire_dpgf > 0:
                         prix_total = quantite_cctp * prix_unitaire_dpgf
                         
-                        # Détecter anomalies (prix anormalement bas ou élevé)
+                        # Stocker dans financial_data pour accès RBAC
                         prix_moyen_marche = cctp_info.get("prix_moyen_marche", prix_unitaire_dpgf)
+                        financial_data[lot] = {
+                            "prix_unitaire_dpgf": prix_unitaire_dpgf,
+                            "prix_moyen_marche": prix_moyen_marche,
+                            "quantite": quantite_cctp,
+                            "prix_total": prix_total,
+                            "ecart_pourcentage": ((prix_unitaire_dpgf - prix_moyen_marche) / prix_moyen_marche * 100) if prix_moyen_marche > 0 else 0
+                        }
                         
+                        # Détecter anomalies (qualitatif UNIQUEMENT)
                         if prix_unitaire_dpgf < prix_moyen_marche * 0.7:
                             findings.append({
                                 "type": "PRIX_ANORMALEMENT_BAS",
                                 "niveau": "ELEVE",
                                 "lot": lot,
-                                "prix_dpgf": f"{prix_unitaire_dpgf:.2f} EUR",
-                                "prix_marche": f"{prix_moyen_marche:.2f} EUR",
-                                "ecart": f"-{(1 - prix_unitaire_dpgf/prix_moyen_marche)*100:.1f}%",
+                                "details": "Prix DPGF anormalement bas (voir financial_data)",
+                                "ecart_estime": "superieur a 30%",
                                 "recommandation": "Justifier écart ou réviser prix"
                             })
                         elif prix_unitaire_dpgf > prix_moyen_marche * 1.5:
@@ -91,9 +110,8 @@ class CCTPDPGFAgent(BaseAgent):
                                 "type": "PRIX_ANORMALEMENT_ELEVE",
                                 "niveau": "ELEVE",
                                 "lot": lot,
-                                "prix_dpgf": f"{prix_unitaire_dpgf:.2f} EUR",
-                                "prix_marche": f"{prix_moyen_marche:.2f} EUR",
-                                "ecart": f"+{(prix_unitaire_dpgf/prix_moyen_marche - 1)*100:.1f}%",
+                                "details": "Prix DPGF anormalement élevé (voir financial_data)",
+                                "ecart_estime": "superieur a 50%",
                                 "recommandation": "Vérifier calcul ou négocier avec fournisseur"
                             })
         
@@ -124,6 +142,7 @@ class CCTPDPGFAgent(BaseAgent):
             confidence=0.93,
             status="SUCCESS",
             findings=findings,
+            financial_data=financial_data if financial_data else None,
             source_pages=[3, 8, 15, 20],
             execution_time_ms=0
         )

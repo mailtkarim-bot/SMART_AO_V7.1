@@ -1,0 +1,568 @@
+fusionner l'agilité Desktop "Anti-ERP" de la V3.2 (Tauri, Mode Panique, UX fluide) avec la puissance de frappe nucléaire de la V7.1 Engine OS (33 Boucliers, Garage Math, Single-Tenant).
+
+Voici la **PASSE 1**, entièrement dédiée à l'**Audit Stratégique des Frictions** et au **Plan de Migration Technique (Le Chantier OS)**. 
+*(La Passe 2 traitera du Mapping UX/Wizard, du Modèle Commercial et des Killer Features).*
+
+---
+
+# 🚀 RAPPORT D'INTÉGRATION V3.2 ➡️ V7.1 ENGINE OS (PASSE 1/2)
+**Objet :** Audit Architectural, Frictions Mortelles et Stratégie du "Pont Tauri"
+**Cible :** Noor (Architecte Fondateur)
+**SSoT de référence :** `ARCHITECTURE_V7_ENGINE.md`, `RAPPORT (1).md`, `Arborescence_V7.1.txt`
+
+## 🛑 1. AUDIT STRATÉGIQUE : LES 4 FRICTIONS MORTELLES DE LA V3.2
+
+La V3.2 est un excellent MVP Desktop, mais pour le marché BTP français de 2026 (marchés publics hostiles, inflation, ZAN, pénurie de main-d'œuvre), elle présente 4 failles structurelles que le Kernel V7.1 doit corriger sans casser l'UX Tauri.
+
+### Friction 1 : Le Péril Hallucinatoire (LLM vs Garage Math)
+*   **L'existant V3.2 :** Le LLM (Mistral/Ollama) est utilisé pour l'analyse, le tri, et potentiellement le chiffrage déboursé sec.
+*   **Le Risque BTP :** Un LLM *hallucine* les chiffres. Sur un DPGF de 400 lignes, une erreur de virgule ou un calcul de marge inventé par l'IA = **élimination pour Prix Anormalement Bas (PAB)** ou faillite à l'exécution.
+*   **La Correction V7.1 (Ségrégation Cognitive) :** 
+    *   Le `Knowledge Engine` (IA) lit, extrait et classe (Zéro € dans les `findings`).
+    *   Le `Math Engine` (Garage) calcule avec **PuLP, OR-Tools et `Decimal 28`** (Zéro LLM, 16 solveurs, corrections P0 CCAG 10%/5%/CCMI). Le LLM n'a plus le droit de toucher à la calculatrice.
+
+### Friction 2 : La Myopie Sémantique (pgvector vs Qdrant BGE-M3)
+*   **L'existant V3.2 :** RAG basé sur `pgvector` (PostgreSQL).
+*   **Le Risque BTP :** `pgvector` est aveugle au jargon technique BTP. Il ne différencie pas sémantiquement un "CCAG Travaux" d'un "CCMI", et rate les acronymes DTU ou les clauses de révision spécifiques (acier, bois).
+*   **La Correction V7.1 :** Déploiement de **Qdrant** (en mode `on_disk` pour économiser la RAM du VPS) avec embeddings **BGE-M3 1024d** + Recherche Hybride (Dense + Sparse RRF) + Fallback Full-Text Search Postgres avec le dictionnaire custom `btp_french`.
+
+### Friction 3 : Le Monolithe Synchrone vs le Kernel OS Asynchrone
+*   **L'existant V3.2 :** API FastAPI classique avec endpoints métiers bloquants. Si le parsing d'un plan de 200 pages bloque, tout le wizard freeze.
+*   **La Correction V7.1 :** Architecture **OS avec 9 Engines**. Les 33 modules métiers ne sont plus des endpoints, mais des **Agents (`BaseAgent`)** orchestrés par le `WorkflowEngine` (6 étapes canoniques) via un `EventBus` asynchrone (`asyncio.Queue` + persistance PG + DLQ).
+
+### Friction 4 : L'Absence d'Étanchéité Financière (RBAC)
+*   **L'existant V3.2 :** Pas de ségrégation stricte des données financières dans les réponses API.
+*   **La Correction V7.1 :** Le RBAC V7.1 est une question de survie pour le Patron. **Salarié = Zéro € visible** (sinon fuite = mort de l'entreprise). **Patron = Finance Warfare Dashboard**. Le `Security Engine` applique un `strip_provisions_euros_v7` sur chaque réponse API et génère le double artefact HANDOFF+.
+
+---
+
+## 🏗️ 2. LE CHANTIER DE MIGRATION TECHNIQUE (LE "PONT TAURI")
+
+Comment greffer le Kernel V7.1 sous le capot de Tauri sans casser les 239 tests de la V3.2 et le build Desktop ? Tauri devient le **Client Edge Natif** qui consomme l'`API Gateway` et l'`UI Engine` du VPS Single-Tenant (ADR-001).
+
+### Étape A : Migration de la Base de Données & RAG (Le Cerveau)
+1.  **Abandon de pgvector** pour la partie sémantique.
+2.  **Déploiement de Qdrant** via Docker Compose sur le VPS client (Single-Tenant Pur : 1 VPS = 1 Client = 1 Qdrant).
+3.  **Migration des 45+ templates** de la V3.2 vers le `Vault A01-A12` et le `Document Engine` (qui gère désormais le parsing PyMuPDF/Docling isolé et le chunking intelligent par type de pièce).
+
+### Étape B : Implémentation du Kernel (Builds 1 à 5)
+Le backend FastAPI de la V3.2 doit être restructuré selon le DAG V7.1 (`PLAN_MAITRE_V7.1`) :
+*   **L'EventBus** remplace les appels synchrones. Quand le wizard Tauri upload un DCE (Step 2), il publie `DocumentAnalysé`. Les 33 agents s'abonnent et tournent en parallèle (semaphore max 6 pour 16Go RAM).
+*   **Le WorkflowEngine** : Le wizard 12 étapes de la V3.2 (Frontend) doit être mappé sur les **6 étapes canoniques** du backend (`PARSER, EXTRACTION, CLASSIFICATION, AGENTS, COMPILATION, RAPPORT`).
+*   **Le Math Engine** : Remplacer les scripts Python de "Chiffrage déboursé sec" de la V3.2 par les 16 solveurs V7.1 (incluant les corrections P0 : CCAG 10%/5%, Avance 2024, ZAN, Pénibilité RH).
+
+### Étape C : Le Protocole de Communication Tauri ↔ UI Engine
+L'application Tauri (React/TS/Tailwind) est conservée car elle respecte la philosophie "Anti-ERP", mais son moteur de communication change radicalement :
+*   **WebSockets (`UI Engine`)** : Au lieu de poller l'API REST, Tauri ouvre un WebSocket (`/ws/mission/{id}`). L'`EventBus` pousse les événements (`AgentDémarré`, `RisqueDétecté`, `MathEngineDone`) en temps réel sur le Wizard. Le salarié voit la progression des 33 boucliers en streaming.
+*   **Le "Mode Panique" (Ctrl+Shift+M) élevé au rang de Mission** : Ce mode génial de la V3.2 est conservé mais transformé en **`Mission(priority=URGENTE, is_blocking=True)`**. Le `WorkflowEngine` bypass les agents longs (Mémoire Booster, RSE) et déclenche uniquement les agents de survie (MAPA Generator, DC1/DC4, DPGF template, Enveloppe Separator) pour sortir le ZIP minimum vital en 3 minutes.
+*   **Gestion du Mode Déconnecté (Fleet Engine)** : Si le VPS est inaccessible, Tauri bascule sur le `Local LLM Fallback` (Ollama Mistral 7B) pour l'extraction qualitative de base, mais bloque tout calcul financier (Garage Math exige le serveur).
+
+---
+
+### ⏸️ FIN DE LA PASSE 1
+
+Noor, cette Passe 1 pose les fondations techniques et architecturales de la greffe V3.2 ➡️ V7.1. Le moteur Tauri est préservé, mais son cerveau est remplacé par le Kernel OS Single-Tenant.
+
+**Dis-moi "GO" (ou pose tes questions sur cette Passe 1) pour que je te déroule la PASSE 2**, qui attaquera :
+1. Le Mapping précis du Wizard V3.2 vers le Wizard Salarié V7.1 (avec RBAC strict).
+2. La résolution du conflit de Modèle Commercial (Licence perpétuelle 3700€ vs Fleet Engine V7.1).
+3. L'intégration des 5 "Killer Features" V7.1 (URSSAF, ZAN, Sourcing, Syntax Checker, Contentieux) directement dans le Menu Tauri.
+
+
+
+# 🔄 PASSE 2/2 — INTÉGRATION v3.2 → V7.1 : MATRICE FONCTIONNELLE, UX, MODÈLE COMMERCIAL & PLAN D'ACTION CODE
+
+*Passe 2 sur 2. La Passe 1 a couvert l'audit stratégique et la migration de stack (pgvector→Qdrant, Tauri, routeur LLM, CLI). Cette Passe 2 est le dossier d'intégration définitif, centré CODE : pour chaque fonction v3.2, où elle atterrit dans V7.1, quel verdict (RÉUTILISER / ADAPTER / RÉÉCRIRE / ABANDONNER), et le code exact des ponts à construire.*
+
+---
+
+## I. MATRICE D'INTÉGRATION FONCTIONNELLE v3.2 → V7.1 (21 fonctions)
+
+| # | Fonction v3.2 | Atterrissage V7.1 | Statut V7.1 | Verdict |
+|---|---|---|---|---|
+| 1 | App Desktop Tauri v2 (React/TS/Tailwind/Zustand) | Edge UI Engine + shell Tauri | UI Engine présent (stubs), Tauri absent | 🟡 **ADAPTER** : conserver le shell Tauri, il consomme l'API Gateway + WS V7.1 |
+| 2 | Onboarding 5 étapes | Absent | Absent | 🔵 **CONSTRUIRE** : wizard onboarding (serveur, LLM, Vault) |
+| 3 | Wizard 12 étapes | Wizard 10 étapes (PLAN_WIZARD) + 12 étapes RAPPORT | Partiel | 🟡 **ADAPTER** : aligner sur 10 étapes, préserver UX v3.2 |
+| 4 | Mode Panique (<48h / Ctrl+Shift+M) | Absent | Absent | 🔵 **CONSTRUIRE** : Mission `URGENTE` fast-track |
+| 5 | Chat Orchestrateur (intent) | Absent (doctrine : pas de chatbot) | Absent | ⚫ **ABANDONNER** (ou assistant optionnel désactivé par défaut) |
+| 6 | Go/No-Go scoring adaptation | Go/No-Go 39/46 gates | Présent | 🟢 **RÉUTILISER** : mapper le scoring sur les gates |
+| 7 | Extraction métré (CCTP + DPGF/OCR) | Document Engine + Cross-Check 7.9 | Partiel | 🟡 **ADAPTER** |
+| 8 | Chiffrage déboursé sec + OR-Tools | Math Engine `chiffrage_pulp` + `planning` OR-Tools | Présent | 🟢 **RÉUTILISER** |
+| 9 | Audit conformité DTU | Knowledge Engine RAG (DTU) | Partiel | 🟡 **ADAPTER** |
+| 10 | Analyse clauses + Rapport Négociation | Q/R Tactique 7.10 + Contentieux 7.23 | Présent | 🟢 **RÉUTILISER** |
+| 11 | 45+ documents générés | Générateurs DOCX/PDF | Partiel | 🟡 **ADAPTER** |
+| 12 | Sélecteur ZIP manuel | Enveloppe Separator 7.21 | Présent | 🟡 **ADAPTER** : UI de sélection manuelle |
+| 13 | Licences & Watermark (demo/essentiel/pro) | Fleet `license_checker` | Partiel | 🟡 **ADAPTER** : watermark demo |
+| 14 | Profil entreprise qualifié | Vault A01-A12 | Présent | 🟢 **RÉUTILISER** |
+| 15 | Analytics & Dashboard | Dashboards cockpit | Présent | 🟢 **RÉUTILISER** |
+| 16 | Workflow multi-utilisateurs | RBAC rôles (PATRON/SALARIÉ/…) | Présent | 🟢 **RÉUTILISER** |
+| 17 | RAG historique entreprise | Collection Qdrant `chantiers` | Présent | 🟢 **RÉUTILISER** |
+| 18 | Charte graphique personnalisée | Personnalisation entreprise | Partiel | 🟡 **ADAPTER** |
+| 19 | Export Word natif | Génération DOCX | Partiel | 🟢 **RÉUTILISER** (python-docx) |
+| 20 | Stack pgvector/Redis/MinIO/Compose 1 cmd | Qdrant/Redis/MinIO/Compose | Présent | 🔵 **MIGRER** : pgvector→Qdrant |
+| 21 | CLI `smartao` / `--dev` / `--web` / `--stop` | scripts/ | Partiel | 🟡 **ADAPTER** : CLI unifié |
+
+**Bilan : 8 RÉUTILISER · 8 ADAPTER · 3 CONSTRUIRE · 1 MIGRER · 1 ABANDONNER.** La v3.2 n'apporte presque rien de *nouveau* sur le métier (V7.1 est strictement supérieur), mais apporte **3 actifs UX irremplaçables** : le shell Tauri, le Mode Panique, et l'onboarding. Ce sont eux qu'il faut sauver.
+
+---
+
+## II. INTÉGRATION UX : WIZARD, ONBOARDING, MODE PANIQUE, CHAT
+
+### 2.1 Wizard : 12 étapes v3.2 → 10 étapes V7.1
+Le wizard v3.2 (12 étapes) et le wizard V7.1 (10 étapes) couvrent le même flux. La fusion correcte : **garder la numérotation V7.1 (10 étapes)** et absorber les étapes v3.2 comme suit :
+
+| v3.2 | → V7.1 |
+|---|---|
+| 1 Identify | Step01 Identify |
+| 2 Upload DCE | Step02 Upload |
+| 3 Analyze | Step03 Analyze (WS streaming 33 modules) |
+| 4 Go/No-Go | Step04 Go/No-Go (gates 39/46) |
+| 5 Visite | Step05 Visite |
+| 6 Métré | Step06 Métré |
+| 7 Chiffrage | **réservé Admin** (le salarié ne voit pas €) |
+| 8 Docs admin | Step07 Docs |
+| 9 Docs techniques | Step08 Docs tech |
+| 10 Docs financiers | **réservé Admin** |
+| 11 Conformité + ZIP | Step09 Conformité + ZIP |
+| 12 Dépôt | Step10 Dépôt (API PLACE) |
+
+### 2.2 Mode Panique → Mission `URGENTE` fast-track (CODE)
+Le Mode Panique v3.2 devient une **Mission à priorité URGENTE** qui restreint les capabilities au "minimum vital" :
+
+```python
+# app/engines/workflow_engine/mission.py
+class MissionPriority(str, Enum):
+    BASSE = "BASSE"; NORMALE = "NORMALE"; HAUTE = "HAUTE"; URGENTE = "URGENTE"  # MODE PANIQUE
+
+# app/engines/workflow_engine/workflow.py
+FAST_TRACK_CAPS = {
+    "CHECK_DEADLINE", "GENERER_DC4", "SEPARER_ENVELOPPE",
+    "DETECTER_PAB", "GENERER_MEMOIRE_TEMPLATE", "GENERER_DPGF_TEMPLATE",
+}
+async def run(self, mission: Mission) -> Mission:
+    if mission.priority == MissionPriority.URGENTE:
+        mission.context["fast_track"] = True
+        mission.context["needed_capabilities"] = sorted(FAST_TRACK_CAPS)
+        # bypass des agents longs (Mémoire Booster complet, RSE, E+C-)
+    ...
+```
+Déclencheur : `deadline < 48h` auto **ou** raccourci `Ctrl+Shift+M` côté Tauri → `POST /api/dce/analyze` avec `priority="URGENTE"`.
+
+### 2.3 Chat Orchestrateur : décision ABANDONNER
+La doctrine V7.1 est « un bouton à la fois, pas de chatbot ». Le Chat Orchestrateur v3.2 contredit cette doctrine. **Décision : abandonner par défaut.** Si souhaité, le réintroduire comme assistant optionnel désactivé (`feature flag ENABLE_CHAT=false`), jamais comme entrée principale.
+
+### 2.4 Onboarding 5 étapes → à construire
+Mapper les 5 étapes v3.2 sur V7.1 : Bienvenue → connexion VPS → **routeur LLM** (Mistral EU défaut, opt-in autres, local si Confidentiel) → import Vault A01-A12 → premier AO golden file. C'est le seul morceau UX manquant à construire.
+
+---
+
+## III. MODÈLE COMMERCIAL & LICENCES : 3 700€ perpétuel vs 549€/mois
+
+La v3.2 vend une **licence perpétuelle 3 700€** ; V7.1 vend **549€/mois** ou **2 490€ setup**. La réconciliation se fait dans le **Fleet Engine `license_checker`** qui supporte les deux modèles + watermark :
+
+```python
+# app/engines/fleet_engine/license_checker.py
+class LicenseType(str, Enum):
+    PERPETUELLE = "perpetuelle"   # héritage v3.2 (3 700€)
+    ABONNEMENT  = "abonnement"    # 549€/mois
+    DEMO        = "demo"
+
+class LicenseChecker:
+    def check(self, key: str) -> LicenseType: ...
+    def watermark(self, lt: LicenseType):
+        return None if lt == LicenseType.PERPETUELLE else "DEMO - NON VALABLE POUR DEPOT"
+```
+Règle : les clients v3.2 perpétuels gardent leur licence (watermark absent) mais **sans** les boucliers V7.1 (7.29-7.33) sauf upgrade. Les nouveaux clients partent sur 549€/mois. Cela préserve la base installée sans casser le MRR.
+
+---
+
+## IV. PONTS CODE v3.2 → V7.1 (extraits prêts à coder)
+
+### 4.1 Routeur LLM OpenAI-compatible (hérite du choix v3.2, impose le défaut souverain)
+```python
+# app/engines/knowledge_engine/llm_router.py
+class LLMRouter:
+    def __init__(self, provider: str = "mistral", confidentiel: bool = False):
+        if confidentiel:                      # DCE Confidentiel Défense/Nucléaire
+            self.client = OllamaClient("mistral:7b")     # local, zéro sortie de données
+        elif provider == "mistral":
+            self.client = MistralEUClient()              # défaut souverain EU
+        elif provider in ("openai", "deepseek", "kimi"): # opt-in explicite + disclaimer RGPD
+            self.client = OpenAICompatible(provider)
+```
+
+### 4.2 Migration pgvector → Qdrant (script one-shot)
+```python
+# scripts/migrate_pgvector_qdrant.py
+# Lire les embeddings pgvector de la v3.2, upsert dans Qdrant avec payload complet
+for row in pg.execute("SELECT doc_id, chunk, embedding, meta FROM embeddings"):
+    qdrant.upsert(collection="dce", points=[Point(id=row.doc_id,
+        vector=row.embedding, payload=row.meta)])
+```
+
+### 4.3 CLI unifié `smartao` (hérite de la CLI v3.2)
+```bash
+# scripts/smartao
+smartao          # backend + fenêtre desktop Tauri
+smartao --dev    # rebuild Tauri à chaud
+smartao --web    # backend seul (fallback web)
+smartao --stop   # arrêt stack
+```
+
+### 4.4 Pont Tauri ↔ UI Engine (WebSocket)
+Le shell Tauri v3.2 conserve son WebView mais se branche sur le WS V7.1 :
+```ts
+// desktop/src/bridge.ts
+const ws = new WebSocket(`ws://${vps}/ws/mission/${missionId}`);
+ws.onmessage = (e) => store.dispatch(eventFromV7(JSON.parse(e.data)));
+```
+
+---
+
+## V. PLAN D'ACTION CODE POUR L'ENCODEUR (sprints priorisés)
+
+| Sprint | Contenu | Fichiers | Gate |
+|---|---|---|---|
+| **V32-1** | Ponts stack : routeur LLM, migrate pgvector→Qdrant, CLI unifié, pont Tauri WS | `llm_router.py`, `migrate_pgvector_qdrant.py`, `scripts/smartao`, `desktop/src/bridge.ts` | routeur + migration verts |
+| **V32-2** | Mode Panique + onboarding | `mission.py` (URGENTE), `workflow.py` (FAST_TRACK), wizard onboarding | Mode Panique E2E <3min |
+| **V32-3** | Modèle commercial : license_checker perpétuel/abonnement + watermark | `fleet_engine/license_checker.py` | licence perpétuelle validée sans watermark |
+
+**Ordre imposé : V32-1 → V32-2 → V32-3.** Ne pas toucher au Kernel V7.1 pendant ces sprints (feature flag `USE_WORKFLOW_ENGINE` maintenu).
+
+---
+
+## VI. GO/NO-GO D'INTÉGRATION & VERDICT FINAL
+
+| Critère | Exigence | Statut |
+|---|---|---|
+| Shell Tauri branché sur API Gateway + WS V7.1 | WS streaming OK | À construire (V32-1) |
+| Mode Panique = Mission URGENTE fast-track | E2E <3min, ZIP minimum vital | À construire (V32-2) |
+| pgvector→Qdrant sans perte | upsert 100% chunks | À exécuter (V32-1) |
+| Licences perpétuelles v3.2 honorées | watermark absent pour perpétuels | À construire (V32-3) |
+| Chat Orchestrateur | désactivé par défaut | Décision : ABANDONNER |
+| Gates V7.1 | 39/39 Single + 46/46 Fleet | Inchangés, bloquants |
+
+**Verdict final de l'intégration :** la v3.2 est une *bonne base UX* posée sur une *mauvaise base technique* (pgvector, LLM qui calcule, pas de RBAC étanche). La V7.1 est l'inverse : *excellente base technique*, UX à parfaire. L'intégration correcte consiste donc à **transplanter le cœur V7.1 sous le shell v3.2**, en sauvant exactement trois actifs (Tauri, Mode Panique, onboarding), en migrant les données (pgvector→Qdrant), et en réconciliant les licences via le Fleet Engine. Tout le reste de la v3.2 est soit déjà supérieur dans V7.1, soit à abandonner (chatbot).
+
+**L'intégration est faisable en 3 sprints (V32-1/2/3) sans casser le Kernel.** Une fois V32-1/2/3 verts ET 39/39 + 46/46 verts, le produit est le monopole décrit : le shell agréable de la v3.2, le cerveau souverain et le coffre-fort de la V7.1.
+
+*Fin de la Passe 2/2 et du rapport d'intégration v3.2→V7.1.*
+
+
+
+
+
+
+
+
+
+
+# 📋 RAPPORT — RESTE À CODER : INTÉGRATION V3.2 ➔ V7.1
+**Périmètre strict :** uniquement ce qui concerne l'intégration de la V3.2 (pas le build V7.1 général).
+**Lecture :** ce qui est déjà absorbé par le Kernel (rien à coder) vs ce qui reste à coder, sprint par sprint, avec fichiers cibles et gates.
+
+---
+
+## 0. CE QUI EST DÉJÀ ABSORBÉ — RIEN À CODER
+
+Ces fonctions V3.2 existent déjà dans V7.1 et sont **supérieures** : chiffrage déboursé sec + OR-Tools (Math Engine), Go/No-Go scoring (gates 39/46), analyse clauses + rapport de négociation (7.10 + 7.23), profil entreprise (Vault A01-A12), RAG historique (Qdrant `chantiers`), export Word (python-docx), multi-utilisateurs (RBAC), analytics.
+**Abandon définitif :** Chat Orchestrateur → seul un feature flag `ENABLE_CHAT=false` est à poser (1 ligne), rien d'autre.
+
+---
+
+## 1. PRÉREQUIS V7.1 À DÉBLOQUER AVANT (stubs vides qui bloquent le pont V3.2)
+
+| Fichier (stub vide aujourd'hui) | Pourquoi bloquant pour la V3.2 |
+|---|---|
+| `api_gateway/workflow_delegate.py` | Le shell Tauri et le Mode Panique appellent `POST /api/dce/analyze` → doit créer la Mission |
+| `api_gateway/dce_analyze_v7.py` | Orchestrateur V7 appelé par le wizard |
+| `document_engine/parser.py` | L'extraction métré V3.2 (CCTP + DPGF/OCR) en dépend |
+| `knowledge_engine/embedding_engine.py` | Le RAG DTU V3.2 et le routeur LLM en dépendent |
+
+---
+
+## 2. SPRINT V32-1 — LE PONT TECHNIQUE (6 chantiers)
+
+| # | À coder | Fichiers cibles | Gate de fin |
+|---|---|---|---|
+| 1 | **Shell Tauri branché V7.1** : dossier `desktop/` (src-tauri + React/TS/Tailwind/Zustand/Wouter) + `desktop/src/bridge.ts` ouvrant le WebSocket `/ws/mission/{id}` | `desktop/**`, `bridge.ts` | `npm run tauri build` → AppImage + .deb OK ; streaming WS des events EventBus dans le wizard |
+| 2 | **CLI unifiée** `smartao` / `--dev` / `--web` / `--stop` | `scripts/smartao` | `smartao` lance backend + fenêtre desktop ; `--web` sert le fallback Nginx |
+| 3 | **Migration pgvector → Qdrant** (one-shot) | `scripts/migrate_pgvector_qdrant.py` | 100% des chunks V3.2 upsertés dans `dce`/`vault`/`chantiers`, zéro perte |
+| 4 | **Routeur LLM multi-providers** (Mistral EU défaut, opt-in OpenAI/Deepseek/Kimi, Ollama local si Confidentiel) | `app/engines/knowledge_engine/llm_router.py` | Test unitaire routing + fallback local sur DCE Confidentiel |
+| 5 | **Extraction métré** (CCTP + import DPGF/OCR + tableaux éditables) | `document_engine/parser.py` + wiring Cross-Check 7.9 | Test métré sur DCE golden (écarts < 2%) |
+| 6 | **Audit conformité DTU** | `knowledge_engine` (RAG DTU + FTS `btp_french`) | Test audit DTU vert |
+
+---
+
+## 3. SPRINT V32-2 — UX & MODE PANIQUE (4 chantiers)
+
+| # | À coder | Fichiers cibles | Gate de fin |
+|---|---|---|---|
+| 7 | **Mode Panique** : `MissionPriority.URGENTE` + `FAST_TRACK_CAPS` + acceptation `priority="URGENTE"` sur `POST /api/dce/analyze` + raccourci `Ctrl+Shift+M` côté Tauri | `workflow_engine/mission.py`, `workflow.py`, `workflow_delegate.py`, `bridge.ts` | **E2E < 3 min** : ZIP minimum vital (DUME + mémoire template + PPSPS + DPGF + AE) |
+| 8 | **Onboarding 5 étapes** (bienvenue, serveur, IA, profil entreprise, démarrage) | `desktop/src/screens/onboarding/*` | Premier lancement → Vault initialisé + LLM configuré |
+| 9 | **Alignement wizard 12 → 10 étapes** en préservant l'UX V3.2 (linéaire, ≤ 4 champs/écran, « Votre IA ») | `desktop/src/screens/wizard/*` | Revue UX : aucune étape > 4 champs, aucun onglet |
+| 10 | **Sélecteur ZIP manuel** (drag & drop 3 colonnes + cochage pièce par pièce) | UI Engine + `agent_enveloppe.py` (7.21) | Test : ZIP recomposé manuellement conforme 3 enveloppes |
+
+---
+
+## 4. SPRINT V32-3 — COMMERCIAL & DOCUMENTS (3 chantiers)
+
+| # | À coder | Fichiers cibles | Gate de fin |
+|---|---|---|---|
+| 11 | **Licences hybrides + watermark** : `LicenseType` PERPETUELLE (héritage 3 700€) / ABONNEMENT / DEMO ; watermark absent si perpétuelle | `fleet_engine/license_checker.py` | Clé perpétuelle V3.2 validée **sans** watermark ; DEMO watermarkée |
+| 12 | **45+ documents générés** : portage des templates V3.2 vers les générateurs V7.1 (DOCX/PDF) | `app/engines/*/generators` | Génération des 45 documents sur un DCE test |
+| 13 | **Charte graphique personnalisée** (logo, couleurs entreprise) | UI Engine theming | Rendu personnalisé OK sur wizard + exports |
+
+---
+
+## 5. ORDRE IMPOSÉ & RÈGLES
+
+```
+Prérequis (stubs) → V32-1 → V32-2 → V32-3
+```
+- **Ne pas toucher au Kernel V7.1** pendant ces sprints (feature flag `USE_WORKFLOW_ENGINE` maintenu).
+- Chaque chantier V32 doit laisser **verts** les gates V7.1 (39/39 Single + 46/46 Fleet) — l'intégration ne doit rien casser.
+
+---
+
+## 6. DEFINITION OF DONE DE L'INTÉGRATION
+
+L'intégration V3.2 est terminée quand, et seulement quand :
+1. Le shell Tauri buildé (AppImage/.deb) consomme l'API Gateway + WS V7.1.
+2. Le Mode Panique sort le ZIP minimum vital en **< 3 min** via `Ctrl+Shift+M`.
+3. L'onboarding 5 étapes configure serveur + LLM + Vault au premier lancement.
+4. Les données pgvector V3.2 sont migrées à 100% vers Qdrant.
+5. Les licences perpétuelles V3.2 fonctionnent sans watermark.
+6. Gates V7.1 toujours 39/39 + 46/46 verts.
+
+**Total : 13 chantiers à coder (6 + 4 + 3) + 4 stubs prérequis + 1 flag d'abandon.** C'est l'intégralité du reste à coder pour l'intégration V3.2 — rien de plus, rien de moins.
+
+
+
+
+
+
+
+Smart_AO v3.2 — Compagnon de réponse aux appels d'offres BTP Fait par un entrepreneur du bâtiment, pour les entrepreneurs du bâtiment.
+
+Smart_AO automatise l'analyse et la réponse aux appels d'offres BTP français, en respectant la procédure française (MAPA / procédure formalisée, 3 enveloppes, CCAG-Travaux 2021, dématérialisation).
+
+Conçu pour un déploiement 100 % souverain (VPS client) : vos données restent sur VOTRE serveur européen. Pas de cloud américain. Pas d'abonnement mensuel. Licence perpétuelle.
+
+🎯 Philosophie Anti-ERP
+Smart_AO n'est pas un ERP. C'est un compagnon de réponse aux AO :
+
+Pas de sidebar permanente — l'écran principal est la liste des AO
+Pas de chatbot qui demande « Posez une question »
+Pas de tableau de bord avec 12 widgets
+Pas de mention du modèle LLM dans l'interface — c'est « Votre IA »
+Pas de formulaire à plus de 4 champs par écran
+Pas de navigation par onglets dans le wizard — linéaire, guidé
+🖥️ Application Desktop native
+L'interface est une application Desktop Tauri v2 (Windows / macOS / Linux) développée avec :
+
+React 18 + TypeScript
+Vite
+Tailwind CSS
+Zustand pour l'état
+Lucide React pour les icônes
+Wouter pour le routing
+Au premier lancement, un onboarding guidé en 5 étapes :
+
+Bienvenue
+Connexion au serveur
+Configuration de votre IA (OpenAI-compatible : Mistral, OpenAI, Anthropic, Deepseek, Kimi, Ollama, custom)
+Profil entreprise
+Démarrage
+Puis l'application affiche le Dashboard et le Wizard 12 étapes.
+
+📋 Wizard 12 étapes BTP France
+Identifier l'appel d'offres (client, travaux, type de marché, date limite)
+Uploader le DCE (PDF ou ZIP, 100 Mo max)
+Analyser automatiquement le DCE (RC, CCAP, CCTP, DPGF, AE, plans)
+Go / No-Go (budget, délai, zone, marge, clauses sociales, caution)
+Visite des lieux (si obligatoire, notes + photos)
+Métré (tableau éditable, sources DPGF / CCTP / Manuel)
+Chiffrage (prix unitaires + frais généraux + marge, alertes si anomalie)
+Documents administratifs (DUME, DC1/DC2, attestations, DC4 sous-traitance)
+Documents techniques (mémoire, PPSPS, Gantt, note méthodo)
+Documents financiers (DPGF/BPU, AE, cautionnement, variantes)
+Vérification conformité + constitution ZIP
+Dépôt (Chorus Pro / remise physique, récapitulatif)
+⚡ Mode Panique
+Déclencheur automatique si délai restant < 48h, ou manuel avec Ctrl+Shift+M. Génère le minimum vital : DUME template + mémoire template + PPSPS simplifié + DPGF + AE.
+
+🛠 Stack
+Couche	Technologie
+Backend	Python 3.12 · FastAPI · SQLAlchemy 2 · Alembic
+IA / RAG	pgvector · Tout LLM OpenAI-compatible (Mistral, OpenAI, Anthropic, Deepseek, Kimi, Ollama, custom)
+Données	PostgreSQL 16 + pgvector · Redis (files)
+Stockage fichiers	MinIO (S3-compatible)
+UI Desktop	Tauri v2 · React 18 · TypeScript · Tailwind CSS · Vite
+UI Web fallback	Nginx sert l'interface desktop buildée (accès VPS sans installer)
+Déploiement	Docker Compose (VPS client en 1 commande) + application desktop
+🚀 Démarrage rapide
+# Sur ton PC Linux — lancer Smart_AO (backend + fenêtre desktop native)
+smartao
+
+# Forcer le mode développement Tauri (rebuild à chaud)
+smartao --dev
+
+# Backend seul, accès via navigateur
+smartao --web
+
+# Arrêter la stack
+smartao --stop
+🏗 Build Desktop
+cd /home/noor/ZCodeProject_CLEAN/desktop
+export PATH="$HOME/.cargo/bin:$PATH"
+npm install
+npm run tauri build
+Livrables générés :
+
+desktop/src-tauri/target/release/bundle/appimage/Smart AO_3.2.0_amd64.AppImage
+desktop/src-tauri/target/release/bundle/deb/Smart AO_3.2.0_amd64.deb
+🧪 Tests
+# Tests backend (nécessite la stack Docker en cours)
+docker-compose run --rm -w /app -v "$PWD/tests:/app/tests" \
+  -e SMARTAO_TEST_DATABASE_URL="postgresql+psycopg://smartao:smartao-dev-password@db:5432/smartao_test" \
+  backend sh -c "PYTHONPATH=/app pytest tests/ -q"
+📦 Modules du produit V3.2
+Application Desktop native — Tauri v2 + React/TS/Tailwind
+Onboarding guidé — serveur, IA, compte, entreprise
+Dashboard Anti-ERP — liste des AO triés par urgence
+Wizard 12 étapes — processus métier BTP France
+Mode Panique — ZIP minimum vital en urgence
+Chat Orchestrateur — l'IA détecte l'intention et exécute le bon moteur métier
+Analyse & Tri Go/No-Go avec scoring d'adaptation marché/entreprise
+Extraction métré (CCTP + import DPGF/OCR + tableaux)
+Chiffrage déboursé sec avec simulation de perte et optimisation OR-Tools
+Audit conformité DTU
+Analyse clauses + Rapport de Négociation
+45+ documents générés : Mémoire Technique, PPSPS, Gantt, DPGF, BPU, DQE, AE, DC1/DC2/DC4/DUME, cautions, lettres contractuelles...
+Sélecteur ZIP — choix précis des documents à inclure
+Licences & Watermark — demo / essentiel / pro
+Profil entreprise qualifié
+Analytics & Dashboard
+Workflow multi-utilisateurs
+RAG historique entreprise
+Charte graphique personnalisée
+Export Word natif
+📚 Documentation
+Guide personnel : PROJECTS/BTP/BTP ENGINE/GUIDE_PERSONNEL_MISE_EN_OEUVRE_SMART_AO_V3.md
+Cahier des charges interface : PROJECTS/BTP/BTP ENGINE/SMART_AO_v3.2_Cahier_des_Charges.md
+Specs techniques : PROJECTS/BTP/BTP ENGINE/SPECS TECHNIQUES/SMART_AO_SPECS_TECHNIQUES_V3.2_ZCODE_V5.md
+Marketing : PROJECTS/BTP/BTP ENGINE/SMART_AO_SITE_WEB_MARKETING_V2.md
+✅ Statut
+Frontend desktop : React/TS/Tailwind, build OK, AppImage + .deb générés
+Backend : API stable, 239 tests passent (3 échecs pré-existants liés aux données DTU)
+Prêt pour déploiement VPS client et commercialisation à prix unique : 3 700 € licence perpétuelle
+
+
+Voici le **Rapport d'Intégration V3.2 ➔ V7.1**, conçu pour être ajouté à tes "passes" d'audit et de rédaction. 
+
+Ce rapport identifie **l'ADN "Terrain & UX"** de la V3.2 qui risque d'être perdu dans l'abstraction "Engine OS" de la V7.1, et prescrit exactement où et comment injecter ces fonctionnalités dans la documentation SSoT (Single Source of Truth) de la V7.1.
+
+---
+
+# 📑 RAPPORT D'INTÉGRATION : PRÉSERVATION DE L'ADN V3.2 DANS SMART_AO V7.1
+**Statut :** Audit de rétro-compatibilité UX & Terrain
+**Objectif :** Garantir que la V7.1 (Architecture OS Backend) ne perde pas l'ergonomie "Anti-ERP", le Mode Panique et le déploiement Desktop Native qui faisaient la force de la V3.2.
+
+## 1. SYNTHÈSE : CE QUI EST DÉJÀ COUVERT PAR LA V7.1
+La V7.1 absorbe naturellement 80% de la puissance métier de la V3.2 via ses Engines :
+*   **Wizard 12 étapes** ➔ Absorbé par le `Workflow Engine` et l'`UI Engine` (Wizard Salarié).
+*   **Chiffrage OR-Tools & Simulation** ➔ Absorbé par le `Math Engine` (Garage).
+*   **RAG Historique Entreprise** ➔ Absorbé par le `Knowledge Engine` (Qdrant remplace pgvector pour la performance).
+*   **45+ Documents générés** ➔ Absorbés par les 33 Agents (Mémoire, PPSPS, DPGF, DC4, etc.).
+*   **Audit DTU & Clauses** ➔ Absorbé par le `Knowledge Engine` (FTS btp_french) et les Agents Juridiques.
+
+---
+
+## 2. LES 7 "TRÉSORS" V3.2 À INJECTER IMPÉRATIVEMENT DANS LA V7.1
+
+### 🏆 Trésor 1 : L'Application Desktop Native (Tauri v2) & Web Fallback
+*   **Le constat V3.2 :** L'UI n'est pas juste un site web, c'est une application Desktop native (Tauri v2) installable (AppImage, .deb, .exe) avec un fallback Web (Nginx) pour l'accès VPS distant.
+*   **L'oubli V7.1 :** L'`UI Engine` V7.1 ne décrit que du React/WebSocket. Le wrapper Tauri et le build natif sont absents de l'arborescence.
+*   **🎯 Action SSoT :** 
+    *   **Arborescence_V7.1.txt :** Ajouter le dossier `desktop/` (Tauri v2 + Rust backend) et `scripts/build_desktop.sh`.
+    *   **ARCHITECTURE_V7_ENGINE.md :** Documenter le déploiement hybride "Tauri Desktop (Client lourd) + Nginx Web Fallback (VPS)" dans la section *Edge: UI Engine*.
+
+### 🏆 Trésor 2 : La Philosophie "Anti-ERP" (Charte UX Stricte)
+*   **Le constat V3.2 :** Pas de sidebar, pas de chatbot générique, max 4 champs par écran, linéarité stricte, masquage du modèle LLM ("Votre IA").
+*   **L'oubli V7.1 :** La V7.1 risque de créer des "Cockpits" complexes avec 12 widgets (Finance Warfare, etc.) qui violent la philosophie "Anti-ERP" pour le salarié.
+*   **🎯 Action SSoT :**
+    *   **RAPPORT (1).md :** Créer le **§3.2 "Charte UX Anti-ERP & Règles d'Interface"**. Y graver les règles : *Linéarité stricte (pas d'onglets), Max 4 champs visibles, Terminologie "Votre IA" (jamais "Mistral" ou "LLM"), Zéro sidebar permanente.*
+
+### 🏆 Trésor 3 : Le Mode Panique (< 48h)
+*   **Le constat V3.2 :** Déclencheur manuel (`Ctrl+Shift+M`) ou auto (< 48h). Génère le "minimum vital" pour déposer et ne pas être éliminé (DUME + Mémoire Template + PPSPS + DPGF + AE).
+*   **L'oubli V7.1 :** Le `Deadline Guardian` (7.13) alerte, mais ne possède pas de workflow de "génération de survie" en 1 clic.
+*   **🎯 Action SSoT :**
+    *   **RAPPORT (1).md :** Ajouter le **Module 7.34 — Mode Panique (Emergency Bypass)**. 
+        *   *Trigger :* Deadline < 48h ou Raccourci Clavier.
+        *   *Garage/Math :* Bypass des optimisations, injection de templates Vault bruts.
+        *   *Output :* ZIP "Minimum Vital" non bloquant.
+
+### 🏆 Trésor 4 : Le Routeur LLM Multi-Providers (OpenAI-Compatible)
+*   **Le constat V3.2 :** L'Onboarding permet de choisir son IA (Mistral, OpenAI, Anthropic, Deepseek, Kimi, Ollama).
+*   **L'oubli V7.1 :** La V7.1 impose Mistral EU par défaut et Ollama en fallback (Knowledge Engine), mais le *Routeur de configuration utilisateur* n'est pas explicité.
+*   **🎯 Action SSoT :**
+    *   **ARCHITECTURE_V7_ENGINE.md :** Ajouter un bloc **"LLM Router (LiteLLM/Custom)"** dans le *Knowledge Engine* qui lit la configuration de l'Onboarding pour router les appels RAG/Génération vers le provider choisi par le client (tout en gardant le Garage Math ZÉRO LLM).
+
+### 🏆 Trésor 5 : CLI & Onboarding Guidé en 5 Étapes
+*   **Le constat V3.2 :** Commandes `smartao`, `smartao --dev`, `smartao --web`. Onboarding (Serveur, IA, Profil).
+*   **L'oubli V7.1 :** L'installation V7.1 est très orientée Docker/DevOps (`install.sh`, `docker-compose`). L'expérience "1 commande pour le patron" manque.
+*   **🎯 Action SSoT :**
+    *   **Arborescence_V7.1.txt :** Ajouter `scripts/smartao_cli.py` (Wrapper CLI unifié).
+    *   **RAPPORT (1).md :** Ajouter le **§2.1 "Onboarding & Setup Wizard"** (Connexion VPS, Config LLM Router, Import Vault initial A01-A12).
+
+### 🏆 Trésor 6 : Sélecteur ZIP Manuel & Export Word Natif
+*   **Le constat V3.2 :** L'utilisateur garde le contrôle final via un "Sélecteur ZIP" (cocher/décocher les docs à inclure) et l'export Word natif (.docx) pour retouche manuelle.
+*   **L'oubli V7.1 :** L'`Enveloppe Separator` (7.21) génère des ZIP automatiques et des PDF, mais le contrôle manuel fin et l'export Word natif doivent être renforcés.
+*   **🎯 Action SSoT :**
+    *   **RAPPORT (1).md §7.21 :** Ajouter la vue Salarié/Admin : **"Sélecteur ZIP Interactif"** (Drag & Drop des 47 pièces vers les 3 enveloppes) et exigence d'export **.docx natif** (via `python-docx`) pour le Mémoire Technique et le PPSPS.
+
+### 🏆 Trésor 7 : Watermark & Gestion des Licences (Demo/Essentiel/Pro)
+*   **Le constat V3.2 :** Gestion des filigranes sur les documents générés selon la licence achetée.
+*   **L'oubli V7.1 :** Le `Fleet Engine` gère les licences VPS, mais l'impact sur les *documents générés* (Watermark PDF/Word) n'est pas spécifié.
+*   **🎯 Action SSoT :**
+    *   **RAPPORT (1).md :** Lier le `Fleet Engine` au `Document Engine` pour l'application dynamique de **Watermarks** ("LICENCE DEMO - NON VALABLE POUR DEPOT") sur les exports si la licence n'est pas "Pro".
+
+---
+
+## 3. PLAN D'INJECTION DANS LA DOCUMENTATION (CHECKLIST D'EXÉCUTION)
+
+Pour que la V7.1 soit parfaitement rétro-compatible avec le succès commercial de la V3.2, voici les modifications à apporter aux documents SSoT lors de ta prochaine passe de rédaction :
+
+| Document SSoT | Section à Modifier / Créer | Ajout V3.2 à Intégrer |
+| :--- | :--- | :--- |
+| **RAPPORT (1).md** | §2.1 Setup & Onboarding | Wizard 5 étapes (Serveur, LLM Router, Vault) |
+| **RAPPORT (1).md** | §3.2 Charte UX (NOUVEAU) | Règles Anti-ERP (Max 4 champs, Linéarité, "Votre IA") |
+| **RAPPORT (1).md** | §7.21 Enveloppe Separator | Sélecteur ZIP Interactif + Export Word Natif (.docx) |
+| **RAPPORT (1).md** | §7.34 Mode Panique (NOUVEAU) | Trigger <48h, ZIP Minimum Vital, Bypass Garage |
+| **ARCHITECTURE.md** | Edge: UI Engine | Wrapper Tauri v2 + Fallback Nginx |
+| **ARCHITECTURE.md** | L2: Knowledge Engine | LLM Router (Multi-providers OpenAI-compatible) |
+| **ARCHITECTURE.md** | L8: Fleet Engine | Watermarking dynamique des exports PDF/Word |
+| **Arborescence.txt** | `/desktop/` (NOUVEAU) | Code source Tauri v2 (Rust + React) |
+| **Arborescence.txt** | `/scripts/smartao_cli.py` | CLI unifiée (`smartao`, `--dev`, `--web`) |
+| **MANIFESTE.md** | §5 Les 4 Armes | Ajouter "Application Desktop Native + Mode Panique" |
+
+---
+
+## 4. ÉVOLUTIONS TECHNIQUES (V3.2 ➔ V7.1) À DOCUMENTER
+
+Il est crucial de noter dans le **HANDBOOK V7.1** pourquoi certaines stacks V3.2 ont été *upgradées* (pour éviter qu'un dev ne tente de réintégrer l'ancienne stack) :
+
+1.  **pgvector ➔ Qdrant (Hybrid RRF)** : *Justification V7.1* : pgvector est limité pour le RAG Hybride (Dense + Sparse SPLADE) sur des DCE de 800 pages. Qdrant on_disk est obligatoire pour la performance V7.1.
+2.  **Redis (Files) ➔ MinIO (S3)** : *Justification V7.1* : Redis n'est pas fait pour le stockage de fichiers lourds (Plans PDF, ZIP DCE). MinIO (S3-compatible) avec presigned URLs est le standard V7.1.
+3.  ** SQLAlchemy 2 + Alembic** : Conservé et renforcé (Single-Tenant pur, 0 `tenant_id`).
+
+---
+
+### 🚀 PROCHAINE ÉTAPE POUR TOI (NOOR)
+Lors de ta prochaine session de rédaction, tu dois :
+1. **Ouvrir `RAPPORT (1).md`** et y insérer le **§3.2 (Charte Anti-ERP)** et le **§7.34 (Mode Panique)**.
+2. **Ouvrir `Arborescence_V7.1.txt`** et y ajouter le bloc `desktop/` (Tauri).
+3. **Ouvrir `ARCHITECTURE_V7_ENGINE.md`** et y ajouter le bloc `LLM Router` dans le Knowledge Engine.
+
+

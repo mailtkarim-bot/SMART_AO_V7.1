@@ -3,6 +3,7 @@
 
 # Core
 pydantic>=2.0.0
+pydantic-settings>=2.1.0
 asyncpg>=0.29.0
 psycopg2-binary>=2.9.9
 python-dotenv>=1.0.0
@@ -16,17 +17,27 @@ pulp>=2.8.0
 ortools>=9.9.0
 
 # API & Web (V7)
-fastapi>=0.109.0
+fastapi>=0.120.0
 sqlalchemy>=2.0.25
 uvicorn>=0.27.0
 python-multipart>=0.0.6
+slowapi>=0.1.8
+python-jose>=3.3.0
+streamlit>=1.30.0
 
 # Knowledge Engine (V7)
 qdrant-client>=1.8.0
+sentence-transformers>=2.5.0  # BGE-M3 embeddings
+# flag_embedding>=1.0.0  # Alternative BGE-M3 (optional)
 
 # Security & Auth (V7)
 pyjwt>=2.8.0
-argon2-cffi>=23.1.0
+python-jose[cryptography]>=3.3.0
+passlib[argon2]>=1.7.4
+email-validator>=2.1.0
+
+# HTTP client (healthcheck, tests)
+httpx>=0.27.0
 
 # OCR (V7) - Optional (heavy dependencies)
 # docling[all]>=0.20.0

@@ -1,11 +1,22 @@
 """
+SMART_AO V7 - project.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Project Model
 ===========================
 PostgreSQL Project model for construction projects
 Source: ARCHITECTURE_V7_ENGINE.md §4.2
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from sqlalchemy import Column, String, Text, DateTime, Integer, Float, JSON
 from sqlalchemy.orm import relationship
@@ -40,10 +51,10 @@ class Project(Base):
     location = Column(String(512), nullable=True)
     budget = Column(Float, nullable=True)
     status = Column(String(64), default="active", nullable=False)
-    start_date = Column(DateTime, nullable=True)
-    end_date = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    start_date = Column(DateTime(timezone=True), nullable=True)
+    end_date = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     extra_metadata = Column(JSON, default={}, nullable=True)
     
     # Relationships

@@ -1,0 +1,9 @@
+# MCP Server Configuration
+server:
+  host: 0.0.0.0
+  port: 8080
+  name: SMART_AO V7 Engine OS
+  version: 1.0.0
+
+logging:
+  level: INFO

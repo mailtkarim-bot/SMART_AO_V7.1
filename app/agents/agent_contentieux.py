@@ -1,4 +1,15 @@
 """
+SMART_AO V7 - agent_contentieux.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Contentieux Generator Agent
 Source: ARCHITECTURE_V7_ENGINE.md §2 + ADR-044 + RAPPORT (1).md §7.23
 
@@ -34,16 +45,26 @@ class ContentieuxGeneratorAgent(BaseAgent):
     async def execute(self, input: AgentInput) -> AgentOutput:
         chunks = input.dce_chunks
         findings = []
+        financial_data = {}
         
         contentieux_data = input.context.get("contentieux", {})
         
         if contentieux_data:
             montant_risque = contentieux_data.get("montant_risque", 0)
+            
+            # Stocker les données financières dans financial_data (accès RBAC patron uniquement)
+            if montant_risque > 0:
+                financial_data["contentieux"] = {
+                    "montant_risque": montant_risque,
+                    "niveau": "CRITIQUE" if montant_risque > 1000000 else "ELEVE"
+                }
+            
+            # Findings qualitatifs UNIQUEMENT (ZERO € garanti)
             if montant_risque > 1000000:
                 findings.append({
                     "type": "RISQUE_CONTENTIEUX_ELEVE",
                     "niveau": "CRITIQUE",
-                    "montant": f"{montant_risque:.2f} EUR",
+                    "details": "Risque contentieux élevé détecté (détails financiers dans financial_data)",
                     "recommandation": "Provisionner immédiatement",
                     "risque": "PROVISION_1MEUR"
                 })
@@ -51,7 +72,7 @@ class ContentieuxGeneratorAgent(BaseAgent):
                 findings.append({
                     "type": "RISQUE_CONTENTIEUX",
                     "niveau": "ELEVE",
-                    "montant": f"{montant_risque:.2f} EUR",
+                    "details": "Risque contentieux détecté (détails financiers dans financial_data)",
                     "recommandation": "Surveiller et provisionner"
                 })
         
@@ -81,6 +102,7 @@ class ContentieuxGeneratorAgent(BaseAgent):
             confidence=0.92,
             status="SUCCESS",
             findings=findings,
+            financial_data=financial_data if financial_data else None,
             source_pages=[1, 5, 10],
             execution_time_ms=0
         )

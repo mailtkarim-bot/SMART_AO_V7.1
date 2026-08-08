@@ -1,0 +1,53 @@
+# =============================================================================
+# SMART_AO V7 - Redis Persistent Volume Claim
+# =============================================================================
+# Persistent Volume Claim pour le stockage des données Redis (AOF/RDB)
+# Build 9 - Phase 5 - Gate 9
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: smart-ao-redis-pvc
+  namespace: smart-ao-v7
+  labels:
+    app: smart-ao
+    component: redis
+    version: v7
+    build: "9"
+    tier: cache
+  annotations:
+    description: "PVC pour les données Redis (AOF/RDB) de SMART_AO V7"
+
+spec:
+  accessModes:
+    - ReadWriteOnce
+  
+  resources:
+    requests:
+      storage: 10Gi
+  
+  storageClassName: standard
+  
+  volumeMode: Filesystem
+
+---
+
+# Exemple de PersistentVolume (à adapter selon votre infrastructure)
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: smart-ao-redis-pv
+#   namespace: smart-ao-v7
+#   labels:
+#     app: smart-ao
+#     component: redis
+#     type: local
+# spec:
+#   storageClassName: manual
+#   capacity:
+#     storage: 10Gi
+#   accessModes:
+#     - ReadWriteOnce
+#   hostPath:
+#     path: "/mnt/data/smart-ao-redis"
+#   persistentVolumeReclaimPolicy: Retain

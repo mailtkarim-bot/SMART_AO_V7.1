@@ -1,3 +1,14 @@
+"""
+SMART_AO V7 - bootstrap_phase2_v2.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
 #!/usr/bin/env python3
 """Bootstrap Phase 2 - Version 2 (Simplifiée)"""
 import json

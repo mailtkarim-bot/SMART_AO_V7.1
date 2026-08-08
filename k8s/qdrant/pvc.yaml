@@ -1,0 +1,53 @@
+# =============================================================================
+# SMART_AO V7 - Qdrant Persistent Volume Claim
+# =============================================================================
+# Persistent Volume Claim pour le stockage des données Qdrant
+# Build 9 - Phase 5 - Gate 9
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: smart-ao-qdrant-pvc
+  namespace: smart-ao-v7
+  labels:
+    app: smart-ao
+    component: qdrant
+    version: v7
+    build: "9"
+    tier: search
+  annotations:
+    description: "PVC pour les données vectorielles Qdrant de SMART_AO V7"
+
+spec:
+  accessModes:
+    - ReadWriteOnce
+  
+  resources:
+    requests:
+      storage: 100Gi
+  
+  storageClassName: standard
+  
+  volumeMode: Filesystem
+
+---
+
+# Exemple de PersistentVolume (à adapter selon votre infrastructure)
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: smart-ao-qdrant-pv
+#   namespace: smart-ao-v7
+#   labels:
+#     app: smart-ao
+#     component: qdrant
+#     type: local
+# spec:
+#   storageClassName: manual
+#   capacity:
+#     storage: 100Gi
+#   accessModes:
+#     - ReadWriteOnce
+#   hostPath:
+#     path: "/mnt/data/smart-ao-qdrant"
+#   persistentVolumeReclaimPolicy: Retain

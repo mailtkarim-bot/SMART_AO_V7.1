@@ -1,0 +1,176 @@
+# =============================================================================
+# SMART_AO V7 - PostgreSQL Deployment
+# =============================================================================
+# Déploiement de PostgreSQL pour SMART_AO V7
+# Build 9 - Phase 5 - Gate 9
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smart-ao-postgres
+  namespace: smart-ao-v7
+  labels:
+    app: smart-ao
+    component: postgres
+    version: v7
+    build: "9"
+    tier: database
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smart-ao
+      component: postgres
+  
+  strategy:
+    type: Recreate
+    rollingUpdate: null
+  
+  template:
+    metadata:
+      labels:
+        app: smart-ao
+        component: postgres
+        version: v7
+        build: "9"
+        tier: database
+    
+    spec:
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+      
+      containers:
+      - name: postgres
+        image: postgres:16-alpine
+        imagePullPolicy: IfNotPresent
+        
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - CHOWN
+            - SETGID
+            - SETUID
+        
+        ports:
+        - containerPort: 5432
+          name: postgres
+          protocol: TCP
+        
+        env:
+        - name: POSTGRES_DB
+          value: smart_ao_v7
+        - name: POSTGRES_USER
+          value: smart_ao
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: smart-ao-secrets
+              key: DB_PASSWORD
+        - name: POSTGRES_INITDB_ARGS
+          value: "--data-checksums --encoding=UTF8 --locale=C"
+        - name: POSTGRES_MEMORY_LIMIT
+          value: "4GB"
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "1"
+        
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - smart_ao
+            - -d
+            - smart_ao_v7
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - smart_ao
+            - -d
+            - smart_ao_v7
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 1
+        
+        startupProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - smart_ao
+            - -d
+            - smart_ao_v7
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 10
+      
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: smart-ao-postgres-pvc
+      
+      nodeSelector:
+        kubernetes.io/os: linux
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: component
+                  operator: In
+                  values:
+                  - postgres
+              topologyKey: kubernetes.io/hostname
+      
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+
+---
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: smart-ao-postgres-pdb
+  namespace: smart-ao-v7
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: smart-ao
+      component: postgres

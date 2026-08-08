@@ -1,4 +1,15 @@
 """
+SMART_AO V7 - agent_memoire_booster.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Mémoire Booster Agent
 Source: ARCHITECTURE_V7_ENGINE.md §2 + ADR-044 + RAPPORT (1).md §7.11
 
@@ -34,6 +45,7 @@ class MemoireBoosterAgent(BaseAgent):
     async def execute(self, input: AgentInput) -> AgentOutput:
         chunks = input.dce_chunks
         findings = []
+        financial_data = {}
         
         historique = input.context.get("historique_chantiers", [])
         current_project = input.context.get("projet_actuel", {})
@@ -66,16 +78,21 @@ class MemoireBoosterAgent(BaseAgent):
                     "recommandation": "Réutiliser données historiques pour optimiser offre"
                 })
                 
-                # Comparaison des prix
+                # Stocker les données financières
                 if projet_similaire.get("prix_m2") and current_project.get("prix_m2"):
+                    financial_data["comparaison_prix"] = {
+                        "prix_historique_m2": projet_similaire["prix_m2"],
+                        "prix_actuel_m2": current_project["prix_m2"]
+                    }
+                    
+                    # Comparaison des prix (qualitatif)
                     ecart = abs(projet_similaire["prix_m2"] - current_project["prix_m2"]) / projet_similaire["prix_m2"]
                     if ecart > 0.2:  # +20%
                         findings.append({
                             "type": "ECART_PRIX_HISTORIQUE",
                             "niveau": "ELEVE",
                             "ecart": f"{ecart * 100:.1f}%",
-                            "prix_historique": f"{projet_similaire['prix_m2']:.2f} EUR/m2",
-                            "prix_actuel": f"{current_project['prix_m2']:.2f} EUR/m2",
+                            "details": "Écart de prix détecté avec projet similaire (voir financial_data)",
                             "recommandation": "Justifier écart ou ajuster offre"
                         })
         
@@ -106,6 +123,7 @@ class MemoireBoosterAgent(BaseAgent):
             confidence=0.88,
             status="SUCCESS",
             findings=findings,
+            financial_data=financial_data if financial_data else None,
             source_pages=[1, 3, 7],
             execution_time_ms=0
         )

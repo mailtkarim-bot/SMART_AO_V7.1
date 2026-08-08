@@ -1,0 +1,37 @@
+[run]
+# Mesure la couverture pour le code core uniquement
+source = app
+omit = 
+    tests
+    test_*
+    __pycache__
+    venv
+    .venv
+    build
+    builds
+    docs
+    app/web
+    app/mcp
+    app/agents
+    app/engines/notification_engine
+    app/engines/plugin_engine
+    app/engines/security_engine
+    app/engines/ui_engine
+    app/engines/math_engine
+    app/engines/knowledge_engine
+    app/engines/document_engine
+    app/tests
+
+[report]
+# Exiger 90% de couverture pour le code core
+fail_under = 90
+show_missing = True
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+
+[html]
+directory = htmlcov

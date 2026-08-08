@@ -1,0 +1,340 @@
+# =============================================================================
+# SMART_AO V7 - Application ConfigMap
+# =============================================================================
+# Configuration principale de l'application SMART_AO V7
+# Build 9 - Phase 5 - Gate 9
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smart-ao-app-config
+  namespace: smart-ao-v7
+  labels:
+    app: smart-ao
+    component: app
+    version: v7
+    build: "9"
+    tier: application
+
+# =============================================================================
+# CONFIGURATION PRINCIPALE
+# =============================================================================
+
+data:
+  # Configuration de l'application
+  app.yaml: |
+    # ===========================================================================
+    # SMART_AO V7 - Configuration Principale
+    # ===========================================================================
+    
+    # Environnement
+    environment: production
+    version: "7.9.0"
+    debug: false
+    
+    # Logging
+    logging:
+      level: INFO
+      format: json
+      handlers:
+        - console
+        - file
+      file_path: /app/logs/smart_ao.log
+      max_size: 10485760  # 10MB
+      backup_count: 5
+    
+    # API REST
+    api:
+      host: 0.0.0.0
+      port: 8000
+      prefix: /api/v1
+      cors_origins:
+        - http://localhost:3000
+        - http://localhost:8080
+        - https://smart-ao-v7.com
+      max_request_size: 52428800  # 50MB
+      timeout: 300
+    
+    # Sécurité
+    security:
+      jwt:
+        secret_key: "CHANGE_ME_IN_PRODUCTION"  # À remplacer par le secret réel
+        algorithm: HS256
+        expire_minutes: 30
+        refresh_expire_days: 7
+      
+      rate_limiting:
+        enabled: true
+        requests: 100
+        window_seconds: 60
+        burst_size: 50
+      
+      circuit_breakers:
+        enabled: true
+        failure_threshold: 5
+        success_threshold: 2
+        timeout_seconds: 60
+        reset_timeout_seconds: 300
+    
+    # Base de données PostgreSQL
+    database:
+      host: smart-ao-postgres
+      port: 5432
+      name: smart_ao_v7
+      user: smart_ao
+      # password: définie via les secrets
+      pool_size: 10
+      max_overflow: 20
+      pool_timeout: 30
+      echo: false
+      
+    # Cache Redis
+    redis:
+      host: smart-ao-redis
+      port: 6379
+      # password: définie via les secrets
+      db: 0
+      max_connections: 50
+      socket_timeout: 5
+      socket_connect_timeout: 5
+      retry_on_timeout: true
+    
+    # Recherche Vectorielle Qdrant
+    qdrant:
+      host: smart-ao-qdrant
+      port: 6333
+      timeout: 30
+      max_retries: 3
+      
+      # Collections par défaut
+      collections:
+        dce_documents:
+          vector_size: 768
+          distance: Cosine
+        mission_results:
+          vector_size: 384
+          distance: Cosine
+        agent_knowledge:
+          vector_size: 1024
+          distance: Cosine
+    
+    # Workflow Engine
+    workflow:
+      max_concurrent: 10
+      timeout_minutes: 30
+      retry_attempts: 3
+      retry_delay_seconds: 5
+      
+      # Étapes du workflow
+      steps:
+        - name: validation
+          description: "Validation des documents uploadés"
+          agent: agent_validation
+          timeout: 60
+        - name: extraction
+          description: "Extraction des données des documents"
+          agent: agent_extraction
+          timeout: 120
+        - name: classification
+          description: "Classification des documents et détection des risques"
+          agent: agent_classification
+          timeout: 180
+        - name: analysis
+          description: "Analyse approfondie par les agents spécialisés"
+          agent: agent_analysis
+          timeout: 240
+        - name: aggregation
+          description: "Agrégation des résultats"
+          agent: agent_aggregation
+          timeout: 120
+        - name: reporting
+          description: "Génération du rapport final"
+          agent: agent_reporting
+          timeout: 180
+    
+    # Agents Configuration
+    agents:
+      timeout_seconds: 120
+      max_retries: 3
+      retry_delay_seconds: 2
+      concurrent_execution: 5
+      
+      # Agents actifs
+      enabled:
+        - agent_validation
+        - agent_extraction
+        - agent_classification
+        - agent_analysis
+        - agent_aggregation
+        - agent_reporting
+        - agent_deadline
+        - agent_penalites
+        - agent_bim
+        - agent_technical
+        - agent_financial
+        - agent_legal
+        - agent_quality
+        - agent_risk
+        - agent_compliance
+        - agent_document
+        - agent_metadata
+        - agent_workflow
+        - agent_notification
+    
+    # Upload Configuration
+    upload:
+      max_size_mb: 50
+      allowed_extensions:
+        - .pdf
+        - .docx
+        - .xlsx
+        - .txt
+        - .json
+      temp_directory: /tmp/uploads
+      cleanup_after_minutes: 60
+    
+    # Stockage
+    storage:
+      data_directory: /app/data
+      max_document_size_mb: 100
+      encryption_enabled: true
+      compression_enabled: true
+
+  # Configuration spécifique pour l'environnement Kubernetes
+  kubernetes.yaml: |
+    # ===========================================================================
+    # Configuration Kubernetes
+    # ===========================================================================
+    
+    k8s:
+      # Health Checks
+      liveness_probe:
+        path: /api/v1/health
+        port: 8000
+        initial_delay: 60
+        period: 15
+        timeout: 5
+        success_threshold: 1
+        failure_threshold: 3
+      
+      readiness_probe:
+        path: /api/v1/health/ready
+        port: 8000
+        initial_delay: 30
+        period: 10
+        timeout: 3
+        success_threshold: 1
+        failure_threshold: 1
+      
+      startup_probe:
+        path: /api/v1/health
+        port: 8000
+        initial_delay: 60
+        period: 15
+        timeout: 5
+        success_threshold: 1
+        failure_threshold: 10
+      
+      # Auto-scaling
+      hpa:
+        min_replicas: 3
+        max_replicas: 10
+        cpu_utilization: 70
+        memory_utilization: 80
+        requests_per_second: 50
+      
+      # Ressources
+      resources:
+        requests:
+          memory: 1Gi
+          cpu: 500m
+        limits:
+          memory: 4Gi
+          cpu: 2
+      
+      # Volume Mounts
+      volumes:
+        - name: app-data
+          path: /app/data
+        - name: app-logs
+          path: /app/logs
+        - name: app-config
+          path: /app/config/custom.yaml
+    
+    # Configuration pour le service mesh (Istio, Linkerd, etc.)
+    service_mesh:
+      enabled: false
+      # sidecar:
+      #   enabled: true
+      #   resources:
+      #     requests:
+      #       memory: 256Mi
+      #       cpu: 250m
+      #     limits:
+      #       memory: 512Mi
+      #       cpu: 500m
+
+  # Configuration pour les secrets (référence)
+  secrets_template.yaml: |
+    # ===========================================================================
+    # Template pour les secrets Kubernetes
+    # ===========================================================================
+    # À créer avec:
+    # kubectl create secret generic smart-ao-secrets \
+    #   --from-literal=DB_PASSWORD='votre_mot_de_passe' \
+    #   --from-literal=REDIS_PASSWORD='votre_mot_de_passe_redis' \
+    #   --from-literal=JWT_SECRET_KEY='votre_secret_jwt' \
+    #   --from-literal=QDRANT_API_KEY='votre_api_key_qdrant'
+    # ===========================================================================
+    
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: smart-ao-secrets
+      namespace: smart-ao-v7
+    type: Opaque
+    data:
+      # DB_PASSWORD: <base64 encoded>
+      # REDIS_PASSWORD: <base64 encoded>
+      # JWT_SECRET_KEY: <base64 encoded>
+      # QDRANT_API_KEY: <base64 encoded>
+
+  # Configuration custom pour les surcharges
+  custom.yaml: |
+    # ===========================================================================
+    # SMART_AO V7 - Configuration Custom
+    # ===========================================================================
+    # Ce fichier peut être monté comme volume pour surcharger la configuration
+    # sans modifier le code source
+    
+    # Exemple de surcharge:
+    custom_settings:
+      # Développeur mode
+      developer_mode: false
+      
+      # Logs supplémentaires
+      debug_logging: false
+      
+      # Endpoints API supplémentaires
+      additional_endpoints: []
+      
+      # Plugins personnalisés
+      custom_plugins:
+        - name: example_plugin
+          enabled: false
+          path: /app/plugins/example.py
+      
+      # Agents personnalisés
+      custom_agents:
+        - name: custom_agent
+          enabled: false
+          path: /app/agents/custom_agent.py
+      
+      # Intégrations tierces
+      integrations:
+        # Intégration avec un service externe
+        external_service:
+          enabled: false
+          url: ""
+          api_key: ""
+          timeout: 30

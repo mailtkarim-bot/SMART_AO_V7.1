@@ -1,5 +1,16 @@
 """
 SMART_AO V7 - 0018_events_v7.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
+SMART_AO V7 - 0018_events_v7.py
 =========================
 Migration for Event and EventType models
 Source: ARCHITECTURE_V7_ENGINE.md §4.4
@@ -29,7 +40,7 @@ def upgrade():
         sa.Column('source', sa.String(length=128), nullable=True),
         sa.Column('mission_id', sa.Integer(), nullable=True),
         sa.Column('step_id', sa.Integer(), nullable=True),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(['mission_id'], ['missions.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['step_id'], ['mission_steps.id'], ondelete='CASCADE'),

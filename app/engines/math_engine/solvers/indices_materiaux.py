@@ -1,4 +1,15 @@
 """
+SMART_AO V7 - indices_materiaux.py
+================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
 SMART_AO V7 - Indices Materiaux
 TODO: Implémenter selon RAPPORT (1).md
 """

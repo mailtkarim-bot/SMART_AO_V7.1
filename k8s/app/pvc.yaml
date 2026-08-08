@@ -1,0 +1,53 @@
+# =============================================================================
+# SMART_AO V7 - Application Persistent Volume Claim
+# =============================================================================
+# Persistent Volume Claim pour le stockage des données de l'application
+# Build 9 - Phase 5 - Gate 9
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: smart-ao-app-pvc
+  namespace: smart-ao-v7
+  labels:
+    app: smart-ao
+    component: app
+    version: v7
+    build: "9"
+    tier: application
+  annotations:
+    description: "PVC pour les données persistantes de l'application SMART_AO V7"
+
+spec:
+  accessModes:
+    - ReadWriteMany
+  
+  resources:
+    requests:
+      storage: 50Gi
+  
+  storageClassName: standard
+  
+  volumeMode: Filesystem
+
+---
+
+# Exemple de PersistentVolume (à adapter selon votre infrastructure)
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: smart-ao-app-pv
+#   namespace: smart-ao-v7
+#   labels:
+#     app: smart-ao
+#     component: app
+#     type: local
+# spec:
+#   storageClassName: manual
+#   capacity:
+#     storage: 50Gi
+#   accessModes:
+#     - ReadWriteMany
+#   hostPath:
+#     path: "/mnt/data/smart-ao-app"
+#   persistentVolumeReclaimPolicy: Retain

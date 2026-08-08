@@ -1,0 +1,319 @@
+name: SMART_AO V7 - CI Pipeline
+
+# =============================================================================
+# SMART_AO V7 - Pipeline CI/CD GitHub Actions
+# Build 9 - Phase 5
+# Auteur: NOOR - Architecte Principal
+# =============================================================================
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+      - release/*
+      - feature/*
+      - hotfix/*
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+
+# =============================================================================
+# ENVIRONNEMENT
+# =============================================================================
+
+env:
+  PYTHON_VERSION: "3.12"
+  PIP_CACHE_DIR: ".pip-cache"
+
+# =============================================================================
+# JOBS
+# =============================================================================
+
+jobs:
+  # =========================================================================
+  # Job 1: Linting et Formatage
+  # =========================================================================
+  lint:
+    name: Linting & Formatting
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: 'requirements*.txt'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run flake8 (Linting)
+        run: |
+          pip install flake8
+          flake8 app/ tests/ scripts/ --max-line-length=120 --extend-ignore=E203,W503 --statistics
+      
+      - name: Run black (Format check)
+        run: |
+          pip install black
+          black --check app/ tests/ scripts/ --line-length=120
+      
+      - name: Run isort (Import sorting check)
+        run: |
+          pip install isort
+          isort --check-only app/ tests/ scripts/
+
+  # =========================================================================
+  # Job 2: Tests Unitaires et Intégration
+  # =========================================================================
+  test:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: lint
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: smart_ao_test
+          POSTGRES_PASSWORD: test_password_12345
+          POSTGRES_DB: smart_ao_v7_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready -U smart_ao_test -d smart_ao_v7_test
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      
+      qdrant:
+        image: qdrant/qdrant:v1.8.0
+        ports:
+          - 6333:6333
+        options: >-
+          --health-cmd wget --spider -q http://localhost:6333
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd redis-cli ping
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: 'requirements*.txt'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov httpx
+      
+      - name: Wait for PostgreSQL
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U smart_ao_test -d smart_ao_v7_test 2>/dev/null; then
+              echo "PostgreSQL is ready"
+              break
+            fi
+            sleep 2
+            echo "Waiting for PostgreSQL... ($i/30)"
+          done
+      
+      - name: Configure test environment
+        run: |
+          echo "DB_HOST=localhost" >> .env.test
+          echo "DB_PORT=5432" >> .env.test
+          echo "DB_NAME=smart_ao_v7_test" >> .env.test
+          echo "DB_USER=smart_ao_test" >> .env.test
+          echo "DB_PASSWORD=test_password_12345" >> .env.test
+          echo "DATABASE_URL=postgresql+asyncpg://smart_ao_test:test_password_12345@localhost:5432/smart_ao_v7_test" >> .env.test
+          echo "QDRANT_HOST=localhost" >> .env.test
+          echo "QDRANT_PORT=6333" >> .env.test
+          echo "REDIS_HOST=localhost" >> .env.test
+          echo "REDIS_PORT=6379" >> .env.test
+      
+      - name: Run unit tests
+        run: |
+          pytest tests/unit/ -v --tb=short -x
+      
+      - name: Run integration tests
+        run: |
+          pytest tests/integration/ -v --tb=short -x
+      
+      - name: Run all tests with coverage
+        run: |
+          pytest tests/unit/ tests/integration/ -v --tb=short --cov=app --cov=tests --cov-report=xml --cov-report=html -x
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unittests
+          fail_ci_if_error: false
+
+  # =========================================================================
+  # Job 3: Validation de la Couverture
+  # =========================================================================
+  coverage:
+    name: Coverage Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest-cov
+      
+      - name: Run coverage check
+        run: |
+          pytest tests/unit/ tests/integration/ --cov=app --cov-report=term --cov-fail-under=90 -q
+
+  # =========================================================================
+  # Job 4: Audit de Sécurité
+  # =========================================================================
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install pip-audit
+        run: pip install pip-audit
+      
+      - name: Run pip-audit
+        run: pip-audit -r requirements.txt --format json -o pip-audit-report.json || true
+      
+      - name: Check for critical vulnerabilities
+        run: |
+          python3 -c "
+import json
+with open('pip-audit-report.json') as f:
+    data = json.load(f)
+critical_count = sum(1 for v in data.get('vulnerabilities', []) if v.get('severity') == 'critical')
+if critical_count > 0:
+    print(f'::error::Found {critical_count} critical vulnerabilities')
+    exit(1)
+else:
+    print(f'No critical vulnerabilities found ({len(data.get(\"vulnerabilities\", []))} issues total)')
+"
+      
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-report
+          path: pip-audit-report.json
+
+  # =========================================================================
+  # Job 5: Validation de la Structure
+  # =========================================================================
+  structure:
+    name: Structure Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run go/no-go check
+        run: |
+          chmod +x scripts/check_go_nogo.sh
+          bash scripts/check_go_nogo.sh
+
+  # =========================================================================
+  # Job 6: Build Docker (Optionnel)
+  # =========================================================================
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [test, coverage, security-audit, structure]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Login to Docker Hub
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+          tags: |
+            smartao/smart-ao-v7:latest
+            smartao/smart-ao-v7:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+# =============================================================================
+# WORKFLOW SUMMARY
+# =============================================================================
+#
+# Ce pipeline CI couvre:
+# 1. ✅ Linting et formatage du code
+# 2. ✅ Tests unitaires et d'intégration avec PostgreSQL, Qdrant, Redis
+# 3. ✅ Validation de la couverture (>90%)
+# 4. ✅ Audit de sécurité (pip-audit)
+# 5. ✅ Validation de la structure (check_go_nogo.sh)
+# 6. ✅ Build Docker (pour main/master)
+#
+# Temps d'exécution estimé: ~40-50 minutes
+# =============================================================================

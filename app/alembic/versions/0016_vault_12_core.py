@@ -1,6 +1,17 @@
 """
 SMART_AO V7 - 0016_vault_12_core.py
 ================================
+Copyright (c) 2026 NOOR - Architecte Principal
+Licence: Proprietary - All Rights Reserved
+Auteur: NOOR
+Date: 06/08/2026
+Build: 9 - Phase: 5
+"""
+
+
+"""
+SMART_AO V7 - 0016_vault_12_core.py
+================================
 Migration for Vault Core tables (VaultDocument, DocumentChunk)
 Source: ARCHITECTURE_V7_ENGINE.md §4.3
 Models: app/models/vault_core.py
@@ -37,8 +48,8 @@ def upgrade():
         sa.Column('embedding', postgresql.ARRAY(sa.Float()), nullable=True),
         sa.Column('extra_metadata', sa.JSON(), nullable=True, default={}),
         sa.Column('status', sa.String(length=64), nullable=False, server_default='uploaded'),
-        sa.Column('processed_at', sa.DateTime(), nullable=True),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column('processed_at', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         
         # Constraints
         sa.PrimaryKeyConstraint('id'),
