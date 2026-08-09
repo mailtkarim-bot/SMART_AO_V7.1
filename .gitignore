@@ -1,26 +1,60 @@
 ```
-# Compiled Python files
-*.pyc
-__pycache__/
+# Environment variables
+.env
 
 # Dependencies
-.venv/
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
 venv/
-.env
-.env.local
-*.env.*
+.venv/
+.ENV
+.venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+*.tmp
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+.target/
+target/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
 
 # Logs
 *.log
 
 # Coverage
-.coverage
-htmlcov/
 coverage/
-
-# Alembic
-alembic/versions/*.py
-
-# Original rules preserved
-*.log
+htmlcov/
+.coverage
 ```

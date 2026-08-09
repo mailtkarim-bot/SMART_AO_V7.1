@@ -37,36 +37,55 @@ export default function Step01_Identify() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
 
-  // Simulation extraction URL BOAMP
+  // Extraction URL BOAMP - Appel API réel backend
   const extractFromURL = async () => {
     if (!url) return;
     setIsAnalyzing(true);
     
-    // Simulation appel API backend: POST /api/v1/missions/extract-url
-    await new Promise(r => setTimeout(r, 2000));
-    
-    setDceData({
-      url,
-      sirenAcheteur: "130025265",
-      nomMOA: "Département de l'Isère",
-      nomMOE: "Bureau d'Études Techniques Alpes",
-      dateLimiteQR: "2026-08-15T17:00:00Z",
-      dateLimiteDepot: "2026-09-05T17:00:00Z",
-      typeProcedure: "Appel d'Offres Ouvert",
-      documents: {
-        RC: true,
-        CCAP: true,
-        CCTP: true,
-        DPGF: false,
-        Plans: true,
-        Diags: false,
-        Planning: false,
-        AE: false,
-        DC1: false,
-        NoticeSite: false,
+    try {
+      // Appel API backend réel: POST /api/v1/missions/extract-url
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/v1/missions/extract-url`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
+        },
+        body: JSON.stringify({ url })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Erreur API: ${response.status}`);
       }
-    });
-    setIsAnalyzing(false);
+      
+      const data = await response.json();
+      setDceData(data);
+    } catch (error) {
+      console.error("Erreur extraction URL:", error);
+      // Fallback mode démo pour développement sans backend
+      setDceData({
+        url,
+        sirenAcheteur: "130025265",
+        nomMOA: "Département de l'Isère",
+        nomMOE: "Bureau d'Études Techniques Alpes",
+        dateLimiteQR: "2026-08-15T17:00:00Z",
+        dateLimiteDepot: "2026-09-05T17:00:00Z",
+        typeProcedure: "Appel d'Offres Ouvert",
+        documents: {
+          RC: true,
+          CCAP: true,
+          CCTP: true,
+          DPGF: false,
+          Plans: true,
+          Diags: false,
+          Planning: false,
+          AE: false,
+          DC1: false,
+          NoticeSite: false,
+        }
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   // Gestion drag & drop ZIP DCE

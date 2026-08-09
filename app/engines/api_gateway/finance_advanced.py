@@ -24,6 +24,7 @@ import logging
 from datetime import date, timedelta
 
 from app.core.security import get_current_user
+from app.api.middleware.auth import require_financial_access
 from app.engines.math_engine.chiffrage_pulp import ChiffragePulpSolver, optimiser_chiffrage_chantier
 
 logger = logging.getLogger(__name__)
@@ -80,7 +81,8 @@ class SimulationInput(BaseModel):
 @router.post("/chiffrage/optimiser", summary="Optimiser chiffrage avec PuLP")
 async def optimiser_chiffrage(
     input: OptimisationInput,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    _: dict = Depends(require_financial_access)
 ):
     """
     Optimiser l'affectation des ressources pour minimiser les coûts.
@@ -104,7 +106,8 @@ async def optimiser_chiffrage(
 async def simuler_chiffrage(
     ressources: List[RessourceInput],
     taches: List[TacheInput],
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    _: dict = Depends(require_financial_access)
 ):
     """
     Simuler un chiffrage avec affectation manuelle.
@@ -144,7 +147,8 @@ async def simuler_chiffrage(
 @router.post("/simulation/chantier", summary="Simuler chantier complet")
 async def simuler_chantier(
     input: SimulationInput,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    _: dict = Depends(require_financial_access)
 ):
     """
     Simuler un chantier complet avec tous les aspects financiers.
@@ -205,7 +209,8 @@ async def simuler_chantier(
 @router.post("/simulation/scenarios", summary="Simuler plusieurs scénarios")
 async def simuler_scenarios(
     scenarios: List[ScenarioInput],
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    _: dict = Depends(require_financial_access)
 ):
     """
     Simuler plusieurs scénarios avec différents paramètres.
@@ -238,7 +243,8 @@ async def simuler_scenarios(
 @router.post("/prevision/risques", summary="Analyse de risques financiers")
 async def analyser_risques_financiers(
     input: ScenarioInput,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    _: dict = Depends(require_financial_access)
 ):
     """
     Analyser les risques financiers d'un chantier.
@@ -291,7 +297,8 @@ async def analyser_risques_financiers(
 @router.post("/prevision/tresorerie", summary="Prévision de trésorerie avancée")
 async def prevision_tresorerie(
     input: ScenarioInput,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    _: dict = Depends(require_financial_access)
 ):
     """
     Prévision de trésorerie avec différents scénarios.

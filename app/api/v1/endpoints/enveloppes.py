@@ -35,6 +35,7 @@ import logging
 
 from app.core.config import settings
 from app.core.security import get_current_user
+from app.api.middleware.auth import require_financial_access
 from app.engines.api_gateway.enveloppe_separator import (
     EnveloppeSeparator,
     EnveloppeType,
@@ -360,6 +361,7 @@ async def download_technique_enveloppe(
 async def download_financiere_enveloppe(
     mission_id: str,
     current_user: Dict[str, Any] = Depends(get_current_user),
+    _: dict = Depends(require_financial_access),
 ):
     """
     Télécharger l'enveloppe FINANCIERE.
