@@ -14,7 +14,7 @@ from typing import List, Optional, Dict, Any
 
 from app.schemas.agent import AgentListResponse, AgentResponse
 from app.engines.agent_runtime.registry import AgentRegistry, registry
-from app.core.security import get_current_user
+from app.core.auth import get_current_user, TokenData
 
 router = APIRouter(prefix="/api/v1/agents", tags=["agents"])
 

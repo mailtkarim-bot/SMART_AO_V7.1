@@ -20,7 +20,7 @@ from fastapi import Depends, HTTPException, status
 
 from app.models.user import Role, User, FINANCIAL_DATA, TECHNICAL_DATA, LEGAL_DATA, ADMIN_DATA, RBAC_RULES
 from app.schemas.users import TokenData
-from app.core.security import get_rbac_service, get_security_service
+from app.core.auth import get_rbac_service, get_security_service
 from app.core.database import get_db as async_get_db
 from app.agents.base_agent import AgentOutput
 from app.engines.security_engine.rbac_fields import FIELDS_STRIP_V6, is_sensitive_field

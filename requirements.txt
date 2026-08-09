@@ -22,7 +22,6 @@ sqlalchemy>=2.0.25
 uvicorn>=0.27.0
 python-multipart>=0.0.6
 slowapi>=0.1.8
-python-jose>=3.3.0
 streamlit>=1.30.0
 
 # Knowledge Engine (V7)
@@ -32,7 +31,6 @@ sentence-transformers>=2.5.0  # BGE-M3 embeddings
 
 # Security & Auth (V7)
 pyjwt>=2.8.0
-python-jose[cryptography]>=3.3.0
 passlib[argon2]>=1.7.4
 email-validator>=2.1.0
 

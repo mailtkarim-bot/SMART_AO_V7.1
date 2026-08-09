@@ -25,7 +25,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-smart_ao}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-your_secure_password_change_me}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_secure_password}
       POSTGRES_DB: ${DB_NAME:-smart_ao_v7}
       # Optimisations pour la production
       POSTGRES_INITDB_ARGS: "--data-checksums --encoding=UTF8 --locale=C"
@@ -83,13 +83,15 @@ services:
     image: redis:7-alpine
     container_name: smart_ao_redis
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-change_me_secure_password}
     volumes:
       - redis_data:/data
     ports:
       - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-change_me_secure_password}
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-change_me_secure_password}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -119,7 +121,7 @@ services:
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-smart_ao_v7}
       DB_USER: ${DB_USER:-smart_ao}
-      DB_PASSWORD: ${DB_PASSWORD:-your_secure_password_change_me}
+      DB_PASSWORD: ${DB_PASSWORD:-change_me_secure_password}
       
       # Configuration Qdrant
       QDRANT_HOST: qdrant
@@ -142,7 +144,7 @@ services:
     ports:
       - "${APP_PORT:-8000}:8000"
     healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health', timeout=5).raise_for_status()"]
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/v1/health', timeout=5).raise_for_status()"]
       interval: 30s
       timeout: 10s
       retries: 3

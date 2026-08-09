@@ -19,7 +19,7 @@ from app.schemas.mission import MissionCreate, MissionResponse, MissionListRespo
 from app.schemas.response import ErrorResponse
 from app.engines.workflow_engine.mission import Mission as WorkflowMission
 from app.models.mission import Mission as MissionModel, MissionStatus as MissionStatusModel
-from app.core.security import get_current_user
+from app.core.auth import get_current_user, TokenData
 from app.core.database import get_db
 from app.engines.security_engine.rbac import get_rbac_enforcer
 from app.models.user import Role

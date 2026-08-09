@@ -24,7 +24,7 @@ import logging
 
 from app.models.user import Role, User, RBAC_RULES, FINANCIAL_DATA, TECHNICAL_DATA, LEGAL_DATA
 from app.core.database import async_get_db
-from app.core.security import RBACService, SecurityService
+from app.core.auth import RBACService, SecurityService
 from app.core.config import settings
 from jose import JWTError, jwt
 from sqlalchemy import select

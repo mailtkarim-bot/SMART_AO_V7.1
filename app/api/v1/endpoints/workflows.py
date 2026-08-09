@@ -15,7 +15,7 @@ from datetime import datetime
 
 from app.schemas.workflow import WorkflowStatusResponse, WorkflowExecutionResponse
 from app.engines.workflow_engine.workflow import WorkflowEngine
-from app.core.security import get_current_user
+from app.core.auth import get_current_user, TokenData
 
 router = APIRouter(prefix="/api/v1/workflows", tags=["workflows"])
 

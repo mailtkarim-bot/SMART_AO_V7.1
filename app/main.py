@@ -23,6 +23,8 @@ import logging
 from app.core.config import settings
 from app.api.v1.endpoints import health, missions, agents, documents, workflows, enveloppes
 from app.engines.api_gateway import finance, finance_advanced, rag
+# TODO P0-6: Les endpoints suivants ont des dépendances incompatibles et nécessitent une refactorisation
+# from app.api.v1.endpoints import dce_analyze, dce_analyze_v7, handoff, pricing, reports, variants, missions_v7
 from app.api.middleware.rate_limiting import setup_rate_limiting, limiter
 from app.api.middleware.rbac_strip import RBACFinancialStripMiddleware
 from app.core.resilience import reset_all_circuit_breakers
@@ -93,6 +95,15 @@ app.include_router(enveloppes.router)
 app.include_router(finance.router)
 app.include_router(finance_advanced.router)
 app.include_router(rag.router)
+
+# TODO P0-6: Monter les endpoints suivants après refactorisation de leurs dépendances
+# app.include_router(dce_analyze.router)
+# app.include_router(dce_analyze_v7.router)
+# app.include_router(handoff.router)
+# app.include_router(pricing.router)
+# app.include_router(reports.router)
+# app.include_router(variants.router)
+# app.include_router(missions_v7.router)
 
 # Ajouter l'état limiter à l'app pour les endpoints
 app.state.limiter = limiter

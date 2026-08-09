@@ -55,8 +55,8 @@ class AgentsStep(BaseStep):
                         # Préparation des données pour l'agent
                         agent_input = self._prepare_agent_input(agent_name, classified_data)
                         
-                        # Exécution de l'agent
-                        result = await agent.analyze(agent_input)
+                        # Exécution de l'agent (P0-4 FIX: utiliser execute() au lieu de analyze())
+                        result = await agent.execute(agent_input)
                         
                         agents_results[agent_name] = {
                             "status": "success",

@@ -3,39 +3,21 @@ SMART_AO V7 - workflow.py
 ================================
 Copyright (c) 2026 NOOR - Architecte Principal
 Licence: Proprietary - All Rights Reserved
-Auteur: NOOR
-Date: 06/08/2026
-Build: 9 - Phase: 5
+
+PATCH P0-3: Remplacer persist() simulé par appel à persistence.py
 """
 
-
-"""
-SMART_AO V7 - Workflow Engine - Tour de contrôle
-Source: ARCHITECTURE_V7_ENGINE.md §4 + ADR-041 + ADR-054
-
-Tour de contrôle principal - 6 étapes canoniques V7:
-- Étape 1: PARSER -> terminé -> event DocumentAnalysé
-- Étape 2: EXTRACTION -> terminé -> event EntitésExtraites
-- Étape 3: CLASSIFICATION -> "Ce DCE contient risques financiers..."
-- Étape 4: AGENTS -> Exécution parallèle des agents pertinents
-- Étape 5: COMPILATION -> Agrégation des résultats
-- Étape 6: RAPPORT -> Génération du rapport et double artefact HANDOFF+
-
-Le Workflow Engine ne fait RIEN lui-même. Il délègue à chaque Engine spécialisé.
-Les étapes métier post-analyse (validation humaine, signature électronique,
-archivage légal, intégration ERP) sont hors périmètre de ce moteur.
-"""
-
-from typing import List, Dict, Optional, Any
 import asyncio
 import logging
 from datetime import datetime, timezone
+from typing import List, Dict, Optional, Any
 import uuid
 
 from app.engines.workflow_engine.mission import Mission, MissionStatus, MissionStep, StepStatus
 from app.engines.event_bus.bus import EventBus, Event
 from app.engines.agent_runtime.registry import AgentRegistry
 from app.agents.base_agent import AgentInput, AgentOutput
+from app.engines.workflow_engine.persistence import persistence, MissionRecord, StepRecord
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +26,7 @@ class WorkflowStep:
     """Représente une étape dans un workflow."""
     def __init__(self, name: str, step_number: int, status: StepStatus = StepStatus.PENDING, step_name: str = None):
         self.name = name
-        self.step_name = step_name if step_name is not None else name  # Alias pour compatibilité avec les tests
+        self.step_name = step_name if step_name is not None else name
         self.step_number = step_number
         self.status = status
 
@@ -53,19 +35,7 @@ class Workflow:
     """
     Représente un workflow pour une mission spécifique.
     Contient les 6 étapes canoniques du workflow V7.
-    
-    Source: ARCHITECTURE_V7_ENGINE.md §4 + ADR-041 + ADR-044
-    
-    Les 6 étapes canoniques:
-    1. PARSER - Parsing des documents DCE
-    2. EXTRACTION - Extraction des entités (SIRET, dates, montants)
-    3. CLASSIFICATION - Classification des risques et besoins
-    4. AGENTS - Exécution parallèle des agents IA
-    5. COMPILATION - Agrégation des résultats
-    6. RAPPORT - Génération du rapport initial et double artefact HANDOFF+
     """
-    
-    # Noms des 6 étapes canoniques V7
     STANDARD_STEPS = [
         "parser_step",
         "extraction_step",
@@ -74,30 +44,29 @@ class Workflow:
         "compilation_step",
         "rapport_step",
     ]
-    
+
     def __init__(self, mission: Mission):
         self.mission = mission
         self.mission_id = mission.id
         self.status = "PENDING"
         self.current_step = 0
         
-        # Créer les 6 étapes canoniques
         self.steps = []
         for i, step_name in enumerate(self.STANDARD_STEPS):
             step = WorkflowStep(
                 name=step_name.upper().replace("_", ""),
-                step_name=step_name,  # Garder le nom original pour le test
+                step_name=step_name,
                 step_number=i,
                 status=StepStatus.PENDING
             )
             self.steps.append(step)
-    
+
     def get_current_step(self):
         """Récupérer l'étape courante."""
         if 0 <= self.current_step < len(self.steps):
             return self.steps[self.current_step]
         return None
-    
+
     def advance(self):
         """Avancer à l'étape suivante."""
         if self.current_step < len(self.steps) - 1:
@@ -107,7 +76,7 @@ class Workflow:
 class WorkflowEngine:
     """
     Tour de contrôle V7 - Kernel OS
-    Persistance PG missions + mission_steps
+    Persistance PG missions + mission_steps via persistence.py
     Parallelisation contrôlée semaphore 6 max pour 16Go RAM
     Gestion des 6 étapes canoniques d'analyse DCE
     """
@@ -126,8 +95,8 @@ class WorkflowEngine:
             project_id=project_id,
             priority=priority,
         )
-        await self.persist(mission)
-        # Publier événement MissionCreated (méthode synchrone, pas de await)
+        await self._persist_mission(mission)
+        
         from app.engines.event_bus.models import MissionCreated
         self.event_bus.publish(MissionCreated(
             mission_id=mission.id,
@@ -138,16 +107,73 @@ class WorkflowEngine:
         logger.info(f"Mission {mission.id} created with {len(docs)} docs")
         return mission
 
+    async def _persist_mission(self, mission: Mission) -> bool:
+        """
+        Persiste une mission en PostgreSQL via persistence.py (P0-3 FIX).
+        Convertit Mission (Pydantic) en MissionRecord (dataclass).
+        """
+        try:
+            mission_record = MissionRecord(
+                mission_id=mission.id,
+                project_id=mission.project_id,
+                mission_type=mission.type,
+                name=f"Mission {mission.id}",
+                description=f"Analyse de {len(mission.documents)} documents",
+                context=mission.context,
+                status=mission.status.value,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+                total_steps=len(mission.workflow),
+                completed_steps=mission.current_step_idx,
+                error_message=mission.error_message if hasattr(mission, 'error_message') else None,
+                extra_metadata={"priority": mission.priority}
+            )
+            
+            result = await persistence.save_mission(mission_record)
+            logger.debug(f"Persisted mission {mission.id} to PostgreSQL status={mission.status}")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to persist mission {mission.id}: {e}")
+            return False
+
     async def persist(self, mission: Mission):
-        """En prod: UPSERT PG. Ici: log + mémoire"""
+        """
+        Wrapper pour compatibilité - délègue à _persist_mission.
+        En prod: UPSERT PG via persistence.py (P0-3 FIX).
+        """
         mission.updated_at = datetime.now(timezone.utc)
-        # TODO prod: await db.execute("INSERT INTO missions ... ON CONFLICT UPDATE")
-        logger.debug(f"Persisted mission {mission.id} status={mission.status}")
+        return await self._persist_mission(mission)
+
+    async def _persist_step(self, mission: Mission, step: MissionStep) -> bool:
+        """
+        Persiste une étape de mission en PostgreSQL via persistence.py.
+        """
+        try:
+            step_record = StepRecord(
+                step_id=f"{mission.id}_{step.name}_{datetime.now(timezone.utc).isoformat()}",
+                mission_id=mission.id,
+                step_name=step.name,
+                step_order=mission.current_step_idx,
+                status=step.status.value,
+                input_data=mission.context.get("input_data", {}),
+                output_data=mission.context,
+                error_message=step.error,
+                started_at=step.started_at,
+                completed_at=step.ended_at,
+                agent_name=None,
+                execution_time_ms=step.duration_ms or 0,
+                created_at=datetime.now(timezone.utc)
+            )
+            
+            result = await persistence.save_step(step_record)
+            logger.debug(f"Persisted step {step.name} for mission {mission.id} to PostgreSQL")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to persist step {step.name} mission {mission.id}: {e}")
+            return False
 
     async def run(self, mission: Mission) -> Mission:
-        """
-        Run complet 6 steps
-        """
+        """Run complet 6 steps"""
         logger.info(f"Starting Mission {mission.id} workflow 6 steps")
         try:
             for idx, step in enumerate(mission.workflow):
@@ -159,6 +185,8 @@ class WorkflowEngine:
                     await self.execute_step(mission, step)
                     step.status = StepStatus.DONE
                     step.ended_at = datetime.now(timezone.utc)
+                    await self._persist_step(mission, step)
+                    
                     self.event_bus.publish(Event(
                         f"{step.name}Terminé",
                         mission_id=mission.id,
@@ -169,6 +197,7 @@ class WorkflowEngine:
                     step.status = StepStatus.FAILED
                     step.error = str(e)
                     step.ended_at = datetime.now(timezone.utc)
+                    await self._persist_step(mission, step)
                     logger.error(f"Step {step.name} failed mission {mission.id}: {e}")
 
                     if self._is_blocking_step(step.name):
@@ -181,7 +210,6 @@ class WorkflowEngine:
                             source="WorkflowEngine"
                         ))
                         raise
-                    # Non bloquant: log + continue (ex: un agent secondaire échoue)
 
                 await self.persist(mission)
 
@@ -241,9 +269,9 @@ class WorkflowEngine:
             raise ValueError(f"Unknown step {step.name}")
 
     async def _run_parser(self, mission: Mission, step: MissionStep):
-        # Délègue à Document Engine
-        # Délègue à Document Engine via import absolu en production
-        await asyncio.sleep(0.1)  # Simule parsing 412 pages
+        # TODO P0-3: Délègue à Document Engine réel
+        # Pour l'instant, on simule encore mais avec persist() réel
+        await asyncio.sleep(0.1)
         mission.context["parsed_pages"] = 412
         self.event_bus.publish(Event(
             "DocumentAnalysé",
@@ -253,7 +281,7 @@ class WorkflowEngine:
         ))
 
     async def _run_extraction(self, mission: Mission, step: MissionStep):
-        # Délègue à Knowledge Engine
+        # TODO P0-3: Délègue à Knowledge Engine réel
         await asyncio.sleep(0.05)
         mission.context["adn_extracted"] = True
         self.event_bus.publish(Event(
@@ -266,11 +294,8 @@ class WorkflowEngine:
     async def _run_classification(self, mission: Mission, step: MissionStep):
         """
         Classification = décide needed_capabilities
-        Ex: Ce DCE contient risques financiers, juridiques, RSE => [DETECTER_PAB, CHECK_DEADLINE, ...]
         """
         await asyncio.sleep(0.02)
-        # Logique simple: si DCE => tous risques, sinon scoring
-        # En prod: LLM classification ou règles
         needed = [
             "DETECTER_PAB",
             "CHECK_DEADLINE",
@@ -278,7 +303,6 @@ class WorkflowEngine:
             "DETECTER_RISQUE_FINANCIER",
             "DETECTER_RISQUE_JURIDIQUE",
         ]
-        # Filtrage contextuel
         if "RSE" in str(mission.context):
             needed.append("BOOSTER_RSE")
 
@@ -309,26 +333,23 @@ class WorkflowEngine:
                     agents_to_run.append(agent)
                     seen.add(agent.name)
 
-        # Scoring pertinence
         scored = []
         for agent in agents_to_run:
             try:
                 score = agent.can_handle(mission)
-                if score >= 0.2:  # Seuil pertinence
+                if score >= 0.2:
                     scored.append((score, agent))
                 else:
                     logger.debug(f"Agent {agent.name} skipped score {score} <0.2")
             except Exception as e:
                 logger.warning(f"can_handle failed {agent.name}: {e}")
-                scored.append((0.5, agent))  # Fallback
+                scored.append((0.5, agent))
 
-        # Tri décroissant
         scored.sort(key=lambda x: x[0], reverse=True)
         agents_sorted = [a for _, a in scored]
 
         logger.info(f"Mission {mission.id} AGENTS step: {len(agents_sorted)}/{len(agents_to_run)} pertinents sur {len(needed_caps)} capabilities")
 
-        # Parallélisation contrôlée
         semaphore = asyncio.Semaphore(self.max_parallel)
         results: List[AgentOutput] = []
 
@@ -336,7 +357,6 @@ class WorkflowEngine:
             async with semaphore:
                 return await self.run_one_agent(mission, agent)
 
-        # Gather avec timeout global step
         try:
             results = await asyncio.wait_for(
                 asyncio.gather(*[run_one(a) for a in agents_sorted], return_exceptions=True),
@@ -346,7 +366,6 @@ class WorkflowEngine:
             logger.error(f"AGENTS step timeout {step.timeout_seconds}s mission {mission.id}")
             raise
 
-        # Traitement résultats + gestion exceptions
         agent_outputs: Dict[str, AgentOutput] = {}
         for res in results:
             if isinstance(res, Exception):
@@ -374,7 +393,6 @@ class WorkflowEngine:
 
         start = datetime.now(timezone.utc)
         try:
-            # Construction AgentInput
             agent_input = AgentInput(
                 mission_id=mission.id,
                 dce_chunks=mission.context.get("dce_chunks", []),
@@ -390,7 +408,6 @@ class WorkflowEngine:
 
             output.execution_time_ms = int((datetime.now(timezone.utc) - start).total_seconds() * 1000)
 
-            # Vérif blocking
             if output.status == "FAILED" and agent.is_blocking:
                 logger.error(f"Blocking agent {agent.name} failed -> Mission FAILED")
                 raise RuntimeError(f"Blocking agent {agent.name} failed")
@@ -412,7 +429,6 @@ class WorkflowEngine:
                 payload={"agent": agent.name, "status": "FAILED", "error": "timeout"},
                 source="AgentRuntime"
             ))
-            # Retourne output FAILED pour non-bloquants
             return AgentOutput(
                 agent_name=agent.name,
                 mission_id=mission.id,
@@ -424,7 +440,7 @@ class WorkflowEngine:
             )
 
     async def _run_compilation(self, mission: Mission, step: MissionStep):
-        # Agrège AgentOutput + Math Engine
+        # TODO P0-3: Délègue à Math Engine réel
         await asyncio.sleep(0.05)
         mission.context["compilation_done"] = True
         self.event_bus.publish(Event(
@@ -435,7 +451,7 @@ class WorkflowEngine:
         ))
 
     async def _run_rapport(self, mission: Mission, step: MissionStep):
-        # Génère double artefact HANDOFF+
+        # TODO P0-3: Délègue à Report Engine réel
         await asyncio.sleep(0.05)
         mission.context["rapport_generated"] = True
         self.event_bus.publish(Event(
@@ -444,5 +460,3 @@ class WorkflowEngine:
             payload={"pages": mission.context.get("rapport_pages", 0)},
             source="WorkflowEngine"
         ))
-
-

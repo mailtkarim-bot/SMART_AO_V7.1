@@ -56,9 +56,9 @@ USER smart_ao
 # Exposer le port par défaut de l'application
 EXPOSE 8000
 
-# Health check
+# Health check (P0-5 FIX: utiliser /api/v1/health au lieu de /health)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import httpx; httpx.get('http://localhost:8000/health', timeout=5).raise_for_status()" || exit 1
+    CMD python -c "import httpx; httpx.get('http://localhost:8000/api/v1/health', timeout=5).raise_for_status()" || exit 1
 
 # Commande par défaut
 CMD ["python", "app/main.py"]

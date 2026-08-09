@@ -17,14 +17,13 @@ Intègre les calculs du Math Engine avec le RBAC
 Source: ARCHITECTURE_V7_ENGINE.md §4.3
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Security
+from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel
 import logging
 
 from app.models.user import Role
-from app.core.security import get_current_user, get_rbac_service
-from app.api.middleware.auth import require_financial_access
+from app.core.auth import get_current_user, get_rbac_service, require_financial_access, TokenData
 from app.engines.math_engine.penalites_cumul import CCAGCalculator, CCMICalculator
 from app.engines.math_engine.margin import MarginAnalyzer
 from app.engines.math_engine.treasury import TreasuryAnalyzer
@@ -128,8 +127,8 @@ class CapaciteFinanciereInput(BaseModel):
 @router.post("/penalites/ccag", summary="Calculer pénalité CCAG")
 async def calculer_penalite_ccag(
     input: PenaliteInput,
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Calculer la pénalité selon CCAG Article 14-1.
@@ -157,8 +156,8 @@ async def calculer_penalite_ccag(
 @router.post("/penalites/ccmi", summary="Calculer pénalité CCMI")
 async def calculer_penalite_ccmi(
     input: PenaliteInput,
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Calculer la pénalité selon CCMI (Cahier des Clauses pour les Marchés de l'Industrie).
@@ -186,8 +185,8 @@ async def calculer_penalite_ccmi(
 @router.post("/marge/brute", summary="Calculer marge brute")
 async def calculer_marge_brute(
     input: MargeInput,
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Calculer la marge brute: (Montant marché - Coût réel) / Montant marché
@@ -208,8 +207,8 @@ async def calculer_marge_brute(
 @router.post("/marge/analyser", summary="Analyse complète des marges")
 async def analyser_marge(
     input: MargeInput,
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Analyse complète des marges avec calculs détaillés.
@@ -241,8 +240,8 @@ async def analyser_marge(
 @router.post("/tresorerie/avance", summary="Calculer avance")
 async def calculer_avance(
     input: TresorerieInput,
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Calculer le montant de l'avance (30% par défaut selon P0 2024).
@@ -259,8 +258,8 @@ async def calculer_avance(
 @router.post("/tresorerie/bfr", summary="Analyse BFR")
 async def analyser_bfr(
     input: TresorerieInput,
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Analyser le Besoin en Fonds de Roulement (BFR) pour un chantier.
@@ -288,8 +287,8 @@ async def analyser_bfr(
 @router.post("/bt01/projection", summary="Projection BT01")
 async def projection_bt01(
     input: TresorerieInput,
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Générer une projection de trésorerie selon BT01.
@@ -306,8 +305,8 @@ async def projection_bt01(
 @router.post("/bt01/rapport", summary="Rapport BT01 complet")
 async def rapport_bt01(
     input: TresorerieInput,
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Générer un rapport BT01 complet avec recommandations.
@@ -328,8 +327,8 @@ async def rapport_bt01(
 @router.post("/capacite/ratios", summary="Calculer ratios financiers")
 async def calculer_ratios(
     input: CapaciteFinanciereInput,
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Calculer les ratios financiers pour l'analyse de capacité.
@@ -357,8 +356,8 @@ async def calculer_ratios(
 @router.post("/capacite/verifier", summary="Vérifier capacité financière")
 async def verifier_capacite_financiere(
     input: CapaciteFinanciereInput,
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Vérifier la capacité financière selon les seuils légaux.
@@ -394,8 +393,8 @@ async def detecter_pab_endpoint(
     prix_propose: float,
     prix_moyen: float,
     prix_minimal: Optional[float] = None,
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Détecter si un prix est anormalement bas (CCAG Article 53).
@@ -407,8 +406,8 @@ async def detecter_pab_endpoint(
 @router.post("/pab/analyser-lots", summary="Analyser lots pour PAB")
 async def analyser_pab_lots_endpoint(
     lots: List[Dict[str, float]],
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Analyser plusieurs lots pour la détection PAB.
@@ -422,8 +421,8 @@ async def detecter_sous_chiffrage_endpoint(
     estimation: float,
     cout_reel: float,
     taux_marge: float = 0.15,
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Détecter un risque de sous-chiffrage.
@@ -436,8 +435,8 @@ async def detecter_sous_chiffrage_endpoint(
 async def analyser_mapa_endpoint(
     montant_ht: float,
     type_acheteur: str = "ETAT",
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Analyser si un marché est éligible à la MAPA.
@@ -449,8 +448,8 @@ async def analyser_mapa_endpoint(
 @router.post("/worst-case/analyser", summary="Analyser pire scénario")
 async def analyser_worst_case_endpoint(
     risques: List[Dict[str, Any]],
-    current_user: dict = Depends(get_current_user),
-    _: dict = Depends(require_financial_access)
+    current_user: TokenData = Depends(get_current_user),
+    _: TokenData = Depends(require_financial_access)
 ):
     """
     Analyser le pire scénario à partir d'une liste de risques.

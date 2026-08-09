@@ -25,7 +25,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.core.security import decode_token
+from app.core.auth import decode_token
 from app.models.user import Role
 from app.engines.security_engine.rbac_fields import FIELDS_STRIP
 

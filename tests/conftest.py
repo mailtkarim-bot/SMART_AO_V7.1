@@ -16,15 +16,20 @@ os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-unit-tests-only-do-not-use-i
 
 
 # =============================================================================
-# BYPASS AUTHENTIFICATION POUR LES TESTS
+# FIXTURES POUR AUTHENTIFICATION (P1-7 FIX)
 # =============================================================================
-# L'option AUTH_DISABLED a été supprimée de la configuration de production.
-# Pour les tests, on surcharge la dépendance get_current_user afin de ne pas
-# multiplier la complexité des tests unitaires et d'intégration.
+# Deux approches pour les tests :
+# 1. override_auth_dependency: Mock l'utilisateur (PATRON) pour les tests simples
+# 2. Token JWT réels: Utiliser patron_token, conducteur_travaux_token, etc.
+#    pour les tests RBAC qui nécessitent de vérifier les vraies permissions
+# 
+# NOTE: Le fixture override_auth_dependency N'EST PAS autouse, il doit être
+# explicitement utilisé. Les tests RBAC doivent utiliser de vrais tokens.
+# Voir test_rbac_security.py pour un exemple.
 
 import pytest
 from app.main import app
-from app.core.security import get_current_user
+from app.core.auth import get_current_user
 from app.core.database import engine, Base
 
 
@@ -51,9 +56,17 @@ async def _mock_get_current_user():
     }
 
 
-@pytest.fixture(autouse=True)
-def _override_auth_dependency():
-    """Surcharge get_current_user pour l'ensemble de la suite de tests."""
+@pytest.fixture
+def override_auth_dependency():
+    """
+    Surcharge get_current_user pour les tests qui n'ont pas besoin d'authentification réelle.
+    
+    NOTE: Ne pas utiliser ce fixture pour les tests RBAC !
+    Utiliser à la place les fixtures patron_token, conducteur_travaux_token, etc.
+    avec de vrais tokens JWT et l'endpoint /api/v1/finance/marge/brute ou autres.
+    
+    Voir test_rbac_security.py pour un exemple de tests RBAC sans override.
+    """
     app.dependency_overrides[get_current_user] = _mock_get_current_user
     yield
     app.dependency_overrides.pop(get_current_user, None)
@@ -74,7 +87,7 @@ def client():
 @pytest.fixture
 def patron_token():
     """Token JWT pour un utilisateur PATRON."""
-    from app.core.security import create_access_token
+    from app.core.auth import create_access_token
     return create_access_token({
         "sub": "patron-test",
         "user_id": "patron-test",
@@ -86,7 +99,7 @@ def patron_token():
 @pytest.fixture
 def conducteur_travaux_token():
     """Token JWT pour un utilisateur CONDUCTEUR_TRAVAUX."""
-    from app.core.security import create_access_token
+    from app.core.auth import create_access_token
     return create_access_token({
         "sub": "conducteur-test",
         "user_id": "conducteur-test",
@@ -98,7 +111,7 @@ def conducteur_travaux_token():
 @pytest.fixture
 def charge_etudes_token():
     """Token JWT pour un utilisateur CHARGE_ETUDES."""
-    from app.core.security import create_access_token
+    from app.core.auth import create_access_token
     return create_access_token({
         "sub": "charge-etudes-test",
         "user_id": "charge-etudes-test",

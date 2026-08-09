@@ -34,8 +34,8 @@ import uuid
 import logging
 
 from app.core.config import settings
-from app.core.security import get_current_user
-from app.api.middleware.auth import require_financial_access
+from app.core.auth import get_current_user, TokenData
+from app.core.auth import require_financial_access
 from app.engines.api_gateway.enveloppe_separator import (
     EnveloppeSeparator,
     EnveloppeType,
