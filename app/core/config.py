@@ -122,6 +122,15 @@ class Settings(BaseSettings):
     # RBAC - Utilisateurs admin (par défaut)
     ADMIN_USERS: List[str] = ["admin", "noor"]
     
+    # SMTP / Notification
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM: Optional[str] = None
+    FROM_EMAIL: Optional[str] = None
+    SMTP_TLS: bool = True
+    
     # MCP
     MCP_HOST: str = "0.0.0.0"
     MCP_PORT: int = 8080

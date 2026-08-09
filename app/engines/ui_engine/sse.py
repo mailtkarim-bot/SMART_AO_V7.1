@@ -1,6 +1,7 @@
 """SSE Engine - Server-Sent Events pour streaming temps réel"""
 import logging
-from typing import AsyncGenerator, Dict, Any
+from datetime import datetime
+from typing import AsyncGenerator, Dict, Any, Optional
 import json
 
 logger = logging.getLogger(__name__)

@@ -104,15 +104,30 @@ class EnveloppeRBAC:
         En production: intégration avec le système d'authentification.
         Pour les tests: utilisation du contexte ou default ADMIN.
         """
-        # Si le context contient le rôle
-        if context and "user_role" in context:
-            return UserRole(context["user_role"])
-        
+        # Si le context contient le rôle (clés supportées: user_role ou role)
+        role_value = None
+        if context:
+            role_value = context.get("user_role") or context.get("role")
+        if role_value:
+            # Normaliser les rôles métier V7 vers les rôles enveloppe
+            role_str = str(role_value).upper()
+            if role_str in ("PATRON", "ADMIN", "SUPER_ADMIN"):
+                return UserRole.ADMIN
+            if role_str == "SUPER_ADMIN":
+                return UserRole.SUPER_ADMIN
+            if role_str in ("SALARIE", "CONDUCTEUR_TRAVAUX", "CHARGE_ETUDES", "SOUS_TRAITANT"):
+                return UserRole.SALARIE
+            try:
+                return UserRole(role_value)
+            except ValueError:
+                logger.warning(f"Rôle inconnu pour enveloppe RBAC: {role_value}, fallback SALARIE")
+                return UserRole.SALARIE
+
         # Si user_id est dans une liste d'admins (à configurer)
         admin_users = getattr(settings, "ADMIN_USERS", [])
         if user_id in admin_users:
             return UserRole.ADMIN
-        
+
         # Par défaut: SALARIE (principe du moindre privilège)
         return UserRole.SALARIE
     

@@ -57,3 +57,51 @@ def _override_auth_dependency():
     app.dependency_overrides[get_current_user] = _mock_get_current_user
     yield
     app.dependency_overrides.pop(get_current_user, None)
+
+
+# =============================================================================
+# FIXTURES POUR TESTS D'INTEGRATION AVEC AUTHENTIFICATION REELLE
+# =============================================================================
+
+@pytest.fixture
+def client():
+    """Client HTTP synchrone pour les tests d'intégration."""
+    from fastapi.testclient import TestClient
+    with TestClient(app) as c:
+        yield c
+
+
+@pytest.fixture
+def patron_token():
+    """Token JWT pour un utilisateur PATRON."""
+    from app.core.security import create_access_token
+    return create_access_token({
+        "sub": "patron-test",
+        "user_id": "patron-test",
+        "role": "patron",
+        "email": "patron@test.com",
+    })
+
+
+@pytest.fixture
+def conducteur_travaux_token():
+    """Token JWT pour un utilisateur CONDUCTEUR_TRAVAUX."""
+    from app.core.security import create_access_token
+    return create_access_token({
+        "sub": "conducteur-test",
+        "user_id": "conducteur-test",
+        "role": "conducteur_travaux",
+        "email": "conducteur@test.com",
+    })
+
+
+@pytest.fixture
+def charge_etudes_token():
+    """Token JWT pour un utilisateur CHARGE_ETUDES."""
+    from app.core.security import create_access_token
+    return create_access_token({
+        "sub": "charge-etudes-test",
+        "user_id": "charge-etudes-test",
+        "role": "charge_etudes",
+        "email": "charge.etudes@test.com",
+    })

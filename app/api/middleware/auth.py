@@ -216,11 +216,12 @@ async def require_financial_access(
         HTTPException: If user doesn't have financial access
     """
     user_role = current_user.role
-    allowed_resources = RBAC_RULES.get(user_role, [])
-    
+    role_key = user_role.value if hasattr(user_role, "value") else str(user_role)
+    allowed_resources = RBAC_RULES.get(role_key, [])
+
     # Check if user has access to any financial data category
     has_financial_access = any(
-        resource in allowed_resources 
+        resource in allowed_resources
         for resource in FINANCIAL_DATA
     )
     
@@ -251,7 +252,8 @@ async def require_admin_access(
     Raises:
         HTTPException: If user doesn't have admin access
     """
-    if current_user.role != "patron":
+    role_value = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    if role_value != "patron":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: Admin functions require PATRON role",

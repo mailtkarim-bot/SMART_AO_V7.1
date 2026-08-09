@@ -115,11 +115,17 @@ def setup_rate_limiting(app: FastAPI, enabled: bool = True):
         return
 
     # Attacher le limiter à l'application et ajouter le middleware slowapi
+    # (idempotent : ne pas ré-ajouter si l'application a déjà démarré, pour les tests)
     app.state.limiter = limiter
+    if getattr(app, "middleware_stack", None) is not None:
+        logger.debug("Rate limiting déjà initialisé (application démarrée)")
+        return
+
     app.add_middleware(SlowAPIMiddleware)
 
-    # Ajouter l'exception handler
-    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+    # Ajouter l'exception handler (idempotent)
+    if RateLimitExceeded not in app.exception_handlers:
+        app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
     logger.info(
         f"Rate limiting ACTIVÉ | "

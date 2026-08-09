@@ -11,9 +11,71 @@ Ces tests vérifient:
 4. Que les endpoints finance_advanced sont protégés
 """
 
+import asyncio
 import pytest
 from fastapi import status
 from typing import Dict, Any
+
+from app.main import app
+from app.core.security import get_current_user, get_password_hash
+from app.core.database import engine, Base
+from app.models.user import User
+from app.engines.security_engine.rbac import Role
+
+
+@pytest.fixture(autouse=True)
+def _disable_auth_override_for_rbac():
+    """Pour les tests RBAC, on utilise l'authentification JWT réelle."""
+    app.dependency_overrides.pop(get_current_user, None)
+    yield
+
+
+async def _create_rbac_users():
+    """Crée les utilisateurs de test RBAC en base."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+    async with AsyncSession(engine) as session:
+        users = [
+            User(
+                user_id="patron-test",
+                email="patron@test.com",
+                username="patron_test",
+                full_name="Patron Test",
+                role=Role.PATRON,
+                hashed_password=get_password_hash("test"),
+                is_active=True,
+            ),
+            User(
+                user_id="conducteur-test",
+                email="conducteur@test.com",
+                username="conducteur_test",
+                full_name="Conducteur Test",
+                role=Role.CONDUCTEUR_TRAVAUX,
+                hashed_password=get_password_hash("test"),
+                is_active=True,
+            ),
+            User(
+                user_id="charge-etudes-test",
+                email="charge.etudes@test.com",
+                username="charge_etudes_test",
+                full_name="Charge Etudes Test",
+                role=Role.CHARGE_ETUDES,
+                hashed_password=get_password_hash("test"),
+                is_active=True,
+            ),
+        ]
+        for user in users:
+            session.add(user)
+        await session.commit()
+
+
+@pytest.fixture(scope="module", autouse=True)
+def rbac_test_users():
+    """Fixture module-scoped qui initialise les utilisateurs RBAC en base."""
+    asyncio.run(_create_rbac_users())
+    yield
 
 
 class TestRBACFinancialAccess:
@@ -22,25 +84,33 @@ class TestRBACFinancialAccess:
     def test_require_financial_access_allows_patron(self, client, patron_token):
         """Le rôle PATRON doit pouvoir accéder aux données financières."""
         headers = {"Authorization": f"Bearer {patron_token}"}
-        
-        # Test sur un endpoint financier
-        response = client.get("/api/v1/finance/bordereaux", headers=headers)
-        
+
+        # Test sur un endpoint financier existant (/marge/brute)
+        response = client.post(
+            "/api/v1/finance/marge/brute",
+            headers=headers,
+            json={"montant_marche": 500000, "cout_reel": 400000}
+        )
+
         # Doit réussir ou échouer pour d'autres raisons (pas 403)
         assert response.status_code != status.HTTP_403_FORBIDDEN, \
-            "PATRON ne devrait pas être bloqué par require_financial_access"
+            f"PATRON ne devrait pas être bloqué par require_financial_access (got {response.status_code})"
     
     def test_require_financial_access_blocks_conducteur_travaux(self, client, conducteur_travaux_token):
         """Le rôle CONDUCTEUR_TRAVAUX doit être bloqué des données financières."""
         headers = {"Authorization": f"Bearer {conducteur_travaux_token}"}
-        
-        # Test sur un endpoint financier
-        response = client.get("/api/v1/finance/bordereaux", headers=headers)
-        
+
+        # Test sur un endpoint financier existant (/marge/brute)
+        response = client.post(
+            "/api/v1/finance/marge/brute",
+            headers=headers,
+            json={"montant_marche": 500000, "cout_reel": 400000}
+        )
+
         # Doit être bloqué avec 403
         assert response.status_code == status.HTTP_403_FORBIDDEN, \
-            "CONDUCTEUR_TRAVAUX doit être bloqué des données financières"
-        
+            f"CONDUCTEUR_TRAVAUX doit être bloqué des données financières (got {response.status_code})"
+
         # Vérifier le message d'erreur
         assert "Financial data requires PATRON role" in response.json().get("detail", "")
 

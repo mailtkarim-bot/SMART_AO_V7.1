@@ -9,8 +9,13 @@ Build: 9 - Phase: 5
 """
 
 
+import logging
 from typing import List, Dict, Any
+
+from sqlalchemy import select
 from mcp.types import Tool
+
+logger = logging.getLogger(__name__)
 
 
 def get_tools() -> List[Tool]:
@@ -127,11 +132,11 @@ async def _list_missions(
 ) -> Dict[str, Any]:
     '''Lister toutes les missions depuis la base.'''
     from sqlalchemy.ext.asyncio import AsyncSession
-    from app.db.session import get_db_session
+    from app.core.database import async_session_maker
     from app.models.mission import Mission
-    
+
     try:
-        async with get_db_session() as session:
+        async with async_session_maker() as session:
             query = select(Mission)
             if status:
                 query = query.where(Mission.status == status)
@@ -163,12 +168,12 @@ async def _list_missions(
 async def _get_mission(mission_id: str) -> Dict[str, Any]:
     '''Récupérer une mission spécifique depuis la base.'''
     from sqlalchemy.ext.asyncio import AsyncSession
-    from app.db.session import get_db_session
+    from app.core.database import async_session_maker
     from app.models.mission import Mission
     from sqlalchemy import select
-    
+
     try:
-        async with get_db_session() as session:
+        async with async_session_maker() as session:
             result = await session.execute(
                 select(Mission).where(Mission.id == mission_id)
             )

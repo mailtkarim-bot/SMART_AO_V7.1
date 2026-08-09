@@ -17,10 +17,19 @@ class ConfidentialiteDetector:
         "fournisseur": r'(?:notre fournisseur|partenaire).{0,30}?(?:exclusif|préférentiel)'
     }
     
-    def detect(self, text: str) -> List[Dict]:
-        """Détecte les informations sensibles dans un texte"""
+    def detect(self, text: str) -> Dict:
+        """Détecte le niveau de confidentialité d'un texte.
+
+        Retourne un dict conforme aux tests V7.1 :
+        {
+            "confidential": bool,
+            "risk_level": "HIGH" | "MEDIUM" | "NONE",
+            "recommended_handler": "local_llm" | "standard",
+            "detections": List[Dict]
+        }
+        """
         detections = []
-        
+
         for category, pattern in self.PATTERNS.items():
             matches = re.finditer(pattern, text, re.IGNORECASE)
             for match in matches:
@@ -32,8 +41,44 @@ class ConfidentialiteDetector:
                     "confidence": 0.8,
                     "action": "mask" if category in ["prix_unitaire", "marge"] else "flag"
                 })
-        
-        return sorted(detections, key=lambda x: x["start"])
+
+        # Mots-clés déclencheurs de confidentialité haute (défense, Seveso, etc.)
+        high_confidence_keywords = [
+            r"confidentiel\s+d[eé]fense",
+            r"secret\s+d[eé]fense",
+            r"seveso",
+            r"sensible",
+            r"classifi[eé]",
+        ]
+        high_risk = any(
+            re.search(kw, text, re.IGNORECASE) for kw in high_confidence_keywords
+        )
+
+        if high_risk:
+            return {
+                "confidential": True,
+                "risk_level": "HIGH",
+                "recommended_handler": "local_llm",
+                "detections": sorted(detections, key=lambda x: x["start"]),
+                "markers": sorted(detections, key=lambda x: x["start"]),
+            }
+
+        if detections:
+            return {
+                "confidential": True,
+                "risk_level": "MEDIUM",
+                "recommended_handler": "standard",
+                "detections": sorted(detections, key=lambda x: x["start"]),
+                "markers": sorted(detections, key=lambda x: x["start"]),
+            }
+
+        return {
+            "confidential": False,
+            "risk_level": "NONE",
+            "recommended_handler": "standard",
+            "detections": [],
+            "markers": [],
+        }
     
     def mask_sensitive_info(self, text: str, detections: List[Dict]) -> str:
         """Masque les informations sensibles détectées"""
@@ -58,3 +103,8 @@ class ConfidentialiteDetector:
 
 # Instance globale
 detector = ConfidentialiteDetector()
+
+
+def detect_confidentialite(text: str) -> List[Dict]:
+    """Fonction utilitaire qui détecte les informations sensibles dans un texte."""
+    return detector.detect(text)
