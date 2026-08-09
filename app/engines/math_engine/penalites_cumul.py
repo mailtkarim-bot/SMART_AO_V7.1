@@ -201,9 +201,9 @@ class CCMICalculator:
     """
     Calculateur de pénalités selon CCMI.
 
-    Règles CCMI (clause type):
-    - Pénalité forfaitaire: 1 000 EUR
-    - + 1 000 EUR par jour de retard au-delà de 10 jours
+    Règles CCMI (CCH art. L.231-8 / R.231-14):
+    - Pénalité minimale légale: 1/3000ᵉ du prix du marché par jour de retard
+    - Plafond: 5% du montant du marché (sauf clause contraire)
     """
 
     @staticmethod
@@ -212,21 +212,34 @@ class CCMICalculator:
         montant_marche_ht: Optional[float] = None
     ) -> PenaliteResult:
         """
-        Calculer la pénalité CCMI.
+        Calculer la pénalité CCMI selon la formule légale (1/3000ᵉ par jour).
 
         Args:
             retard_jours: Nombre de jours de retard.
-            montant_marche_ht: Montant du marché (non utilisé mais conservé
-                pour homogénéité avec CCAG).
+            montant_marche_ht: Montant du marché HT (requis pour CCMI).
 
         Returns:
             PenaliteResult: Résultat du calcul.
-        """
-        retard_jours = max(0, int(retard_jours))
-        penalite_base = 1000.0
-        penalite_jour = max(0, retard_jours - 10) * 1000.0
-        penalite_totale = penalite_base + penalite_jour
 
+        Raises:
+            ValueError: Si montant_marche_ht est absent ou nul.
+        """
+        if not montant_marche_ht or montant_marche_ht <= 0:
+            raise ValueError("CCMI: montant_marche_ht requis pour le calcul (1/3000ᵉ du prix)")
+        
+        retard_jours = max(0, int(retard_jours))
+        
+        # Formule légale CCMI: 1/3000ᵉ du prix du marché par jour de retard
+        from decimal import Decimal, ROUND_HALF_UP
+        montant_decimal = Decimal(str(montant_marche_ht))
+        penalite_journaliere = (montant_decimal / Decimal(3000)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        penalite_totale = (penalite_journaliere * Decimal(retard_jours)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        
+        # Plafond légal: 5% du montant du marché
+        plafond = (montant_decimal * Decimal('0.05')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        if penalite_totale > plafond:
+            penalite_totale = plafond
+        
         if retard_jours > 30:
             niveau = NiveauPenalite.CRITIQUE
         elif retard_jours > 20:
@@ -234,19 +247,20 @@ class CCMICalculator:
         elif retard_jours > 10:
             niveau = NiveauPenalite.MOYEN
         else:
-            niveau = NiveauPenalite.FAIBLE
+            niveau = NiveauPenalite.FAIBLE if retard_jours > 0 else NiveauPenalite.NUL
 
         return PenaliteResult(
             type=PenaliteType.CCMI,
-            montant=penalite_totale,
-            base_calcul=montant_marche_ht if montant_marche_ht else 0.0,
+            montant=float(penalite_totale),
+            base_calcul=montant_marche_ht,
             retard_jours=retard_jours,
             niveau=niveau,
-            reference="CCMI",
+            reference="CCH art. L.231-8 / R.231-14 (1/3000ᵉ par jour, plafonné 5%)",
             details={
-                "penalite_base": penalite_base,
-                "penalite_journaliere": penalite_jour,
-                "seuil_10_jours": 10
+                "formule": "1/3000ᵉ du prix du marché par jour de retard",
+                "penalite_journaliere": float(penalite_journaliere),
+                "plafond_5pct": float(plafond),
+                "base_legale": "Code de la Construction et de l'Habitation"
             }
         )
 

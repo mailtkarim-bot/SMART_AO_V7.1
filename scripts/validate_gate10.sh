@@ -43,8 +43,8 @@ for file in $source_files; do
 done
 
 if [ $license_missing -gt 0 ]; then
-    echo "   ⚠️ $license_missing fichier(s) sans en-tête de licence"
-    # Ne pas compter comme erreur bloquante pour Gate 10
+    echo "   ❌ $license_missing fichier(s) sans en-tête de licence"
+    errors=$((errors + license_missing))
 fi
 
 # 2. Vérifier l'absence de code mort (TODO, FIXME, XXX)
@@ -54,8 +54,8 @@ todo_count=$(grep -r "# TODO\|# FIXME\|# XXX\|// TODO\|// FIXME\|// XXX" app --i
 if [ $todo_count -eq 0 ]; then
     echo "   ✅ Aucun TODO/FIXME/XXX trouvé"
 else
-    echo "   ⚠️ $todo_count TODO/FIXME/XXX trouvés (à traiter avant la production)"
-    # Ne pas compter comme erreur bloquante pour Gate 10
+    echo "   ❌ $todo_count TODO/FIXME/XXX trouvés (BLOQUANT pour production)"
+    errors=$((errors + todo_count))
 fi
 
 # 3. Vérifier la qualité du code avec flake8 (si disponible)
@@ -66,8 +66,8 @@ if command -v flake8 &> /dev/null; then
     if flake8 app --max-line-length=120 --extend-ignore=E203,W503 2>/dev/null; then
         echo "   ✅ flake8: Aucune erreur"
     else
-        echo "   ⚠️ flake8: Des avertissements ont été trouvés"
-        # Ne pas compter comme erreur bloquante
+        echo "   ❌ flake8: Des erreurs ont été trouvées (BLOQUANT)"
+        errors=$((errors + 1))
     fi
 else
     echo "   ⚠️ flake8 non installé - Vérification ignorée"
@@ -181,14 +181,14 @@ echo ""
 
 # Vérifier les secrets dans les fichiers (ne devrait pas y en avoir)
 echo "   → Vérification des secrets dans le code..."
-secrets_found=$(grep -r "PASSWORD\|SECRET\|API_KEY\|PRIVATE_KEY" app --include="*.py" --include="*.yaml" --include="*.yml" --include="*.json" | grep -v "env\|getenv\|os.environ\|secret_key\|JWT_SECRET" | wc -l)
+secrets_found=$(grep -r "PASSWORD\|SECRET\|API_KEY\|PRIVATE_KEY" app --include="*.py" --include="*.yaml" --include="*.yml" --include="*.json" | grep -v "env\|getenv\|os.environ" | wc -l)
 if [ $secrets_found -eq 0 ]; then
     echo "   ✅ Aucun secret en dur trouvé dans le code"
 else
-    echo "   ⚠️ $secrets_found occurrence(s) de mots-clés sensibles trouvés"
+    echo "   ❌ $secrets_found occurrence(s) de mots-clés sensibles trouvés (BLOQUANT)"
     # Afficher les fichiers concernés
-    grep -r "PASSWORD\|SECRET\|API_KEY\|PRIVATE_KEY" app --include="*.py" --include="*.yaml" --include="*.yml" --include="*.json" | grep -v "env\|getenv\|os.environ\|secret_key\|JWT_SECRET" | cut -d: -f1 | sort -u | sed 's/^/     /'
-    # Ne pas compter comme erreur bloquante si ce sont des références aux variables d'environnement
+    grep -r "PASSWORD\|SECRET\|API_KEY\|PRIVATE_KEY" app --include="*.py" --include="*.yaml" --include="*.yml" --include="*.json" | grep -v "env\|getenv\|os.environ" | cut -d: -f1 | sort -u | sed 's/^/     /'
+    errors=$((errors + secrets_found))
 fi
 
 # Vérifier les dépendances vulnérables
@@ -238,12 +238,16 @@ if [ $errors -eq 0 ]; then
     echo "  ✅ Gate 9 : Déploiement Staging validé"
     echo "  ✅ Gate 10: Revue finale de code validée"
     echo ""
-    echo "🎉 SMART_AO V7 - Build 9 est PRÊT POUR LA PRODUCTION !"
+    echo "🎉 SMART_AO V7 - Build 9 est PRÊT POUR LE STAGING !"
     echo ""
     exit 0
 else
     echo "❌ Gate 10: ÉCHEC"
     echo "$errors problèmes bloquants détectés"
     echo "=========================================="
+    echo ""
+    echo "INTERDICTION DE PRODUCTION ET DE STAGING"
+    echo "Corriger tous les problèmes avant de continuer"
+    echo ""
     exit 1
 fi

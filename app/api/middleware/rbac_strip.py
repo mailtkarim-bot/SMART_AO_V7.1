@@ -117,8 +117,12 @@ class RBACFinancialStripMiddleware(BaseHTTPMiddleware):
                     media_type="application/json",
                 )
             except Exception as exc:
-                logger.warning(f"RBAC strip middleware error: {exc}")
-                # Fail-open : on conserve la réponse originale
-                return response
+                logger.exception(f"RBAC strip middleware failure - fail-close applied")
+                # FAIL-CLOSE : sur erreur interne, on refuse l'accès plutôt que de fuiter des données
+                from starlette.responses import JSONResponse
+                return JSONResponse(
+                    status_code=500,
+                    content={"detail": "Internal authorization error - accès refusé par sécurité"}
+                )
 
         return response

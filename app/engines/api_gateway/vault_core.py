@@ -30,7 +30,7 @@ from app.core.database import engine
 from app.models.vault_core import VaultDocument, DocumentChunk
 from app.core.config import settings
 from app.engines.security_engine.filesystem import validate_file, get_file_extension
-from app.engines.security_engine.clamav import scan_file as scan_for_virus
+from app.engines.security_engine.clamav import scan_content
 
 
 # =============================================================================
@@ -141,12 +141,14 @@ class VaultCoreEngine:
         # Step 2: Scan for viruses
         if settings.STORAGE_ENCRYPTION_ENABLED:
             # In production, always scan
-            is_clean, scan_result = await scan_for_virus(file_content)
-            if not is_clean:
+            scan_result = await scan_content(file_content, file_name)
+            if scan_result.is_infected:
                 # Quarantine the file
                 return await self._quarantine_file(
-                    file_content, file_name, scan_result
+                    file_content, file_name, scan_result.virus_name
                 )
+            if scan_result.is_error:
+                raise RuntimeError(f"Scan antivirus indisponible — upload refusé: {scan_result.message}")
         
         # Step 3: Generate IDs and hash
         document_id = f"doc_{uuid.uuid4().hex[:16]}"

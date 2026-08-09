@@ -21,6 +21,9 @@ from app.engines.workflow_engine.mission import Mission as WorkflowMission
 from app.models.mission import Mission as MissionModel, MissionStatus as MissionStatusModel
 from app.core.security import get_current_user
 from app.core.database import get_db
+from app.api.middleware.auth import require_financial_access
+from app.engines.security_engine.rbac import get_rbac_enforcer
+from app.models.user import Role
 
 router = APIRouter(prefix="/api/v1/missions", tags=["missions"])
 
@@ -34,6 +37,10 @@ async def list_missions(
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     '''Lister toutes les missions avec pagination.'''
+    
+    # Récupérer le rôle de l'utilisateur et appliquer le filtrage RBAC
+    enforcer = get_rbac_enforcer()
+    user_role = Role(current_user.get("role", "conducteur_travaux"))
     
     # Construction de la requête (single-tenant pur : pas de filtre tenant)
     query = select(MissionModel)
@@ -95,6 +102,13 @@ async def list_missions(
         if mission_model.extra_metadata and "mission_type" in mission_model.extra_metadata:
             mission_type = mission_model.extra_metadata["mission_type"]
         
+        # Appliquer le filtrage RBAC sur parameters et result
+        raw_parameters = mission_model.extra_metadata.get("parameters") if mission_model.extra_metadata else None
+        safe_parameters = enforcer.filter_mission_data_by_role(raw_parameters, user_role) if raw_parameters else None
+        
+        raw_result = mission_model.extra_metadata.get("result") if mission_model.extra_metadata else None
+        safe_result = enforcer.filter_mission_data_by_role(raw_result, user_role) if raw_result else None
+        
         missions.append(MissionResponse(
             id=mission_model.mission_id,
             name=mission_model.name,
@@ -102,12 +116,12 @@ async def list_missions(
             description=mission_model.description,
             status=status_map.get(mission_model.status, MissionStatus.PENDING),
             priority=priority_value,
-            parameters=mission_model.extra_metadata.get("parameters") if mission_model.extra_metadata else None,
+            parameters=safe_parameters,
             agent_name=mission_model.extra_metadata.get("agent_name") if mission_model.extra_metadata else None,
             created_at=mission_model.created_at,
             updated_at=mission_model.updated_at,
             completed_at=mission_model.completed_at,
-            result=mission_model.extra_metadata.get("result") if mission_model.extra_metadata else None,
+            result=safe_result,
             error=mission_model.error_message,
         ))
     
@@ -187,6 +201,10 @@ async def get_mission(
 ):
     '''Récupérer une mission spécifique.'''
     
+    # Récupérer le rôle de l'utilisateur pour le filtrage RBAC
+    enforcer = get_rbac_enforcer()
+    user_role = Role(current_user.get("role", "conducteur_travaux"))
+    
     # Récupérer depuis PostgreSQL (single-tenant pur : pas de filtre tenant)
     result = await db.execute(
         select(MissionModel).where(
@@ -227,6 +245,13 @@ async def get_mission(
     if mission_model.extra_metadata and "mission_type" in mission_model.extra_metadata:
         mission_type = mission_model.extra_metadata["mission_type"]
     
+    # Appliquer le filtrage RBAC sur parameters et result
+    raw_parameters = mission_model.extra_metadata.get("parameters") if mission_model.extra_metadata else None
+    safe_parameters = enforcer.filter_mission_data_by_role(raw_parameters, user_role) if raw_parameters else None
+    
+    raw_result = mission_model.extra_metadata.get("result") if mission_model.extra_metadata else None
+    safe_result = enforcer.filter_mission_data_by_role(raw_result, user_role) if raw_result else None
+    
     return MissionResponse(
         id=mission_model.mission_id,
         name=mission_model.name,
@@ -234,11 +259,11 @@ async def get_mission(
         description=mission_model.description,
         status=status_map.get(mission_model.status, MissionStatus.PENDING),
         priority=priority_value,
-        parameters=mission_model.extra_metadata.get("parameters") if mission_model.extra_metadata else None,
+        parameters=safe_parameters,
         agent_name=mission_model.extra_metadata.get("agent_name") if mission_model.extra_metadata else None,
         created_at=mission_model.created_at,
         updated_at=mission_model.updated_at,
         completed_at=mission_model.completed_at,
-        result=mission_model.extra_metadata.get("result") if mission_model.extra_metadata else None,
+        result=safe_result,
         error=mission_model.error_message,
     )
