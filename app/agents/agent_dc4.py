@@ -13,8 +13,9 @@ Build: 9 - Phase: 5
 SMART_AO V7 - DC4 Agent
 Source: ARCHITECTURE_V7_ENGINE.md §2 + ADR-044 + RAPPORT (1).md §7.5
 
-Agent d'analyse des documents DC4 (Déclaration de Candidature)
+Agent d'analyse des documents DC4 (Déclaration de Sous-traitance)
 Vérifie la conformité administrative et les pièces jointes
+DC4 = Formulaire Cerfa de déclaration de sous-traitance (et non Déclaration de Candidature)
 """
 
 from datetime import timedelta

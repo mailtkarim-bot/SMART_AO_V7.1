@@ -1,1 +1,26 @@
-Nothing to output - the change list contains only a markdown file (RAPPORT_AUDIT_SUPPLEMENTAIRE.md) which is a source/config file, and there are no build artifacts, dependencies, or temp files to ignore.
+```
+# Compiled Python files
+*.pyc
+__pycache__/
+
+# Dependencies
+.venv/
+venv/
+.env
+.env.local
+*.env.*
+
+# Logs
+*.log
+
+# Coverage
+.coverage
+htmlcov/
+coverage/
+
+# Alembic
+alembic/versions/*.py
+
+# Original rules preserved
+*.log
+```

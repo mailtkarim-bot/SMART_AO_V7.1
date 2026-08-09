@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 
 from app.agents.base_agent import BaseAgent, AgentInput, AgentOutput
 from app.engines.workflow_engine.mission import Mission
+from app.engines.agent_runtime.registry import registry
 
 
 @dataclass
@@ -53,6 +54,7 @@ class Certification:
         return (self.expiry_date - check_date).days
 
 
+@registry.register(capabilities=["certification_check", "expiry_detection", "compliance_audit"])
 class CertifLiveCheckerAgent(BaseAgent):
     """Agent de vérification des certifications en temps réel."""
     
@@ -71,22 +73,15 @@ class CertifLiveCheckerAgent(BaseAgent):
         super().__init__()
         self._certifications: List[Certification] = []
     
-    def can_handle(self, input_data: AgentInput) -> bool:
-        """Vérifier si l'agent peut traiter l'entrée."""
-        # Cet agent peut traiter les missions avec des documents de certification
-        if input_data.mission_id:
-            mission: Optional[Mission] = self._get_mission(input_data.mission_id)
-            if mission and mission.context:
-                doc_types = mission.context.get("document_types", [])
-                if "certification" in doc_types or "certificat" in doc_types:
-                    return True
-        
-        # Vérifier si c'est une demande explicite de vérification certif
-        if input_data.context:
-            if input_data.context.get("check_certifications", False):
-                return True
-        
-        return False
+    def can_handle(self, mission: Mission) -> float:
+        """Vérifier si l'agent peut traiter la mission - signature conforme au contrat BaseAgent."""
+        ctx = mission.context or {}
+        doc_types = ctx.get("document_types", [])
+        if "certification" in str(doc_types) or "certificat" in str(doc_types):
+            return 0.95
+        if ctx.get("check_certifications", False):
+            return 0.95
+        return 0.20
     
     async def execute(self, input_data: AgentInput) -> AgentOutput:
         """Exécuter la vérification des certifications."""
@@ -119,29 +114,38 @@ class CertifLiveCheckerAgent(BaseAgent):
             "expired": sum(1 for r in results if not r["is_valid"] and r["status"] == "EXPIRED"),
             "expiring_soon": sum(1 for r in results if r["days_to_expiry"] <= self.EXPIRY_WARNING_DAYS),
             "details": results,
-            "warnings": warnings,
-            "errors": errors,
         }
         
-        # Déterminer le statut global
+        # Déterminer le statut global - conforme au pattern AgentOutput
         if errors:
-            status = "CRITICAL"
+            status = "FAILED"
         elif warnings:
-            status = "WARNING"
+            status = "PARTIAL"
         else:
             status = "SUCCESS"
+        
+        # Construire les findings qualitatifs (ZERO € garanti)
+        findings = []
+        for cert in certifications:
+            result = next((r for r in results if r["certification_id"] == cert.cert_id), None)
+            if result and not result["is_valid"]:
+                findings.append({
+                    "type": "CERTIF_EXPIREE",
+                    "niveau": "CRITIQUE",
+                    "certification": cert.name,
+                    "recommandation": "Renouveler avant dépôt"
+                })
         
         return AgentOutput(
             agent_name=self.name,
             mission_id=input_data.mission_id,
+            capability="certification_check",
+            confidence=0.9,
             status=status,
-            data=report,
+            findings=findings,
             warnings=warnings,
-            errors=errors,
-            metadata={
-                "certifications_checked": len(certifications),
-                "check_date": today.isoformat(),
-            }
+            financial_data=report,
+            source_pages=[]
         )
     
     def _extract_certifications(self, input_data: AgentInput) -> List[Certification]:
@@ -227,10 +231,3 @@ class CertifLiveCheckerAgent(BaseAgent):
 
 # Alias pour compatibilité
 CertifAgent = CertifLiveCheckerAgent
-
-
-# Enregistrement automatique
-if __name__ == "__main__":
-    from app.engines.agent_runtime.registry import registry
-    registry.register(CertifLiveCheckerAgent())
-    print(f"✅ {CertifLiveCheckerAgent.name} enregistré dans le registry")

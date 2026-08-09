@@ -25,7 +25,7 @@ from app.core.config import settings
 from app.core.auth import get_auth_service
 from app.models.user import Role, FINANCIAL_DATA, TECHNICAL_DATA, LEGAL_DATA, ADMIN_DATA, RBAC_RULES
 from app.schemas.users import TokenData
-from app.core.database import async_get_db
+from app.core.database import get_db
 from app.models.user import User
 from sqlalchemy import select
 
@@ -46,7 +46,7 @@ oauth2_scheme = OAuth2PasswordBearer(
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db: Any = Depends(async_get_db)
+    db: Any = Depends(get_db)
 ) -> TokenData:
     """
     Dependency to get the current authenticated user from JWT token

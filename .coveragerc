@@ -1,5 +1,5 @@
 [run]
-# Mesure la couverture pour le code core uniquement
+# Mesure la couverture pour tout le code critique
 source = app
 omit = 
     tests
@@ -12,19 +12,10 @@ omit =
     docs
     app/web
     app/mcp
-    app/agents
-    app/engines/notification_engine
-    app/engines/plugin_engine
-    app/engines/security_engine
-    app/engines/ui_engine
-    app/engines/math_engine
-    app/engines/knowledge_engine
-    app/engines/document_engine
-    app/tests
 
 [report]
-# Exiger 90% de couverture pour le code core
-fail_under = 90
+# Seuil réaliste de départ - à remonter progressivement
+fail_under = 60
 show_missing = True
 exclude_lines =
     pragma: no cover

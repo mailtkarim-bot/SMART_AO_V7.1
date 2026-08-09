@@ -18,7 +18,8 @@ Utilise AES-256-GCM pour le chiffrement symétrique
 
 import base64
 import hashlib
-from typing import Optional, Union, bytes, str
+import secrets
+from typing import Optional, Union
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
@@ -237,12 +238,5 @@ def decrypt_field(encrypted_value: Optional[str]) -> Optional[Union[str, int, fl
 
 
 # =============================================================================
-# IMPORT POUR SECRETS
+# IMPORT POUR SECRETS (SUPPRIMÉ - DÉJÀ IMPORTÉ EN TÊTE)
 # =============================================================================
-
-try:
-    import secrets
-except ImportError:
-    # Fallback pour les anciennes versions de Python
-    import os
-    secrets = os

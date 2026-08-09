@@ -77,7 +77,7 @@ from pydantic import BaseModel, Field
 
 class SeparationRequest(BaseModel):
     """Requête pour lancer une séparation de documents."""
-    document_paths: List[str] = Field(..., description="Liste des chemins vers les documents")
+    document_ids: List[str] = Field(..., description="Liste des IDs des documents déjà enregistrés au Vault")
     document_types: Optional[List[str]] = Field(
         None, 
         description="Types des documents (VaultDocumentType ou DCEPieceType)"
@@ -163,17 +163,33 @@ async def separate_documents(
     user_id = current_user.get("sub") or current_user.get("user_id") or "unknown"
     user_role = current_user.get("role", "SALARIE")
     
-    logger.info(f"Separation request: mission={mission_id}, user={user_id}, docs={len(request.document_paths)}")
+    logger.info(f"Separation request: mission={mission_id}, user={user_id}, docs={len(request.document_ids)}")
     
-    # Créer les métadonnées des documents
+    # Récupérer les documents depuis le Vault par leurs IDs (sécurité: plus de chemins arbitraires)
+    from sqlalchemy import select
+    from app.models.vault_core import VaultDocument
+    from app.core.database import engine
+    from sqlalchemy.ext.asyncio import AsyncSession
+    
+    async with AsyncSession(engine) as db:
+        result = await db.execute(
+            select(VaultDocument).where(VaultDocument.document_id.in_(request.document_ids))
+        )
+        vault_docs = result.scalars().all()
+    
+    if len(vault_docs) != len(request.document_ids):
+        missing = set(request.document_ids) - {doc.document_id for doc in vault_docs}
+        raise HTTPException(status_code=404, detail=f"Documents non trouvés: {missing}")
+    
+    # Créer les métadonnées des documents à partir des entrées Vault sécurisées
     documents = []
-    for i, doc_path in enumerate(request.document_paths):
-        doc_type = (request.document_types or ["DCE"] * len(request.document_paths))[i]
-        vault_code = (request.vault_codes or [None] * len(request.document_paths))[i]
+    for i, vault_doc in enumerate(vault_docs):
+        doc_type = (request.document_types or ["DCE"] * len(vault_docs))[i]
+        vault_code = (request.vault_codes or [None] * len(vault_docs))[i]
         
         doc = create_document_metadata(
-            document_id=f"doc_{uuid.uuid4().hex[:8]}",
-            file_path=doc_path,
+            document_id=vault_doc.document_id,
+            file_path=vault_doc.file_path,  # Chemin sécurisé depuis la base
             document_type=doc_type,
             is_vault=vault_code is not None and vault_code.startswith("A"),
             vault_code=vault_code,

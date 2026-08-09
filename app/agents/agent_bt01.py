@@ -12,11 +12,14 @@ Build: 9 - Phase: 5
 """
 SMART_AO V7 - BT01 Conformité Agent
 ===================================
-Agent de vérification de conformité au Bordereau des Prix Unitaires (BT01)
+Agent de vérification de conformité au BT01 (indice INSEE du coût de la construction)
 Vérifie la conformité des offres aux exigences légales
 
+Le BT01 est l'indice INSEE de référence pour les formules de révision de prix,
+et non un Bordereau des Prix Unitaires.
+
 Fonctionnalités:
-- Vérification des prix unitaires
+- Vérification des indices BT01 dans les formules de révision
 - Détection des écarts anormaux
 - Vérification des libellés
 - Conformité aux seuils légaux
