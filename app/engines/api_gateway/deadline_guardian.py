@@ -16,10 +16,10 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 import logging
 
-from app.db.session import get_db
+from app.core.database import get_db
 from app.models.mission import Mission
 from app.models.user import User
-from app.api.middleware.rbac_strip import require_authenticated, get_current_user
+from app.core.auth import get_current_user
 from app.engines.notification_engine.deadline import DeadlineMonitor
 
 logger = logging.getLogger(__name__)

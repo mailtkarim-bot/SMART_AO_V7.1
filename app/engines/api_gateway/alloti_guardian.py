@@ -26,7 +26,7 @@ router = APIRouter(prefix="/api/v1/alloti", tags=["Allotissement Guardian"])
 
 
 class AllotiAlert(BaseModel):
-    \"\"\"Alerte de problème d'allotissement.\"\"\"
+    """Alerte de problème d'allotissement."""
     mission_id: Optional[str]
     project_id: Optional[str]
     type_alerte: str
@@ -37,7 +37,7 @@ class AllotiAlert(BaseModel):
 
 
 class AllotiValidationResult(BaseModel):
-    \"\"\"Résultat de validation d'allotissement.\"\"\"
+    """Résultat de validation d'allotissement."""
     mission_id: str
     project_id: Optional[str]
     est_valide: bool
@@ -53,9 +53,9 @@ async def validate_allotissement(
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    \"\"\"
+    """
     Valide la conformité de l'allotissement pour une mission.
-    \"\"\"
+    """
     logger.info(f"Validation allotissement mission {mission_id} par {current_user.email}")
     
     return AllotiValidationResult(
@@ -76,9 +76,9 @@ async def check_allotissement_balance(
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    \"\"\"
+    """
     Vérifie l'équilibre entre les lots d'une mission.
-    \"\"\"
+    """
     if not lots:
         raise HTTPException(status_code=400, detail="Aucun lot fourni")
     
@@ -123,9 +123,9 @@ async def check_cctp_dpgf_coherence(
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    \"\"\"
+    """
     Vérifie la cohérence CCTP/DPGF.
-    \"\"\"
+    """
     if cctp_montant <= 0:
         raise HTTPException(status_code=400, detail="Montant CCTP doit être positif")
     
@@ -161,5 +161,3 @@ async def check_cctp_dpgf_coherence(
 async def health_check():
     return {"status": "healthy", "service": "alloti_guardian", "version": "1.0.0", 
             "timestamp": datetime.utcnow().isoformat()}
-
-

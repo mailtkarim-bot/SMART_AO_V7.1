@@ -23,6 +23,18 @@ import logging
 from app.core.config import settings
 from app.api.v1.endpoints import health, missions, agents, documents, workflows, enveloppes
 from app.engines.api_gateway import finance, finance_advanced, rag
+from app.engines.api_gateway import (
+    alloti_guardian,
+    certif_live_checker,
+    deadline_guardian,
+    workflow_delegate,
+    users,
+    qr_moe,
+    dce_analyze_v6_compat,
+    pab_detector,
+    post_gagne_tracker,
+    memoire_booster
+)
 # TODO P0-6: Les endpoints suivants ont des dépendances incompatibles et nécessitent une refactorisation
 # from app.api.v1.endpoints import dce_analyze, dce_analyze_v7, handoff, pricing, reports, variants, missions_v7
 from app.api.middleware.rate_limiting import setup_rate_limiting, limiter
@@ -96,7 +108,20 @@ app.include_router(finance.router)
 app.include_router(finance_advanced.router)
 app.include_router(rag.router)
 
+# P0 API Gateway Endpoints - mounted
+app.include_router(alloti_guardian.router)
+app.include_router(certif_live_checker.router)
+app.include_router(deadline_guardian.router)
+app.include_router(workflow_delegate.router)
+app.include_router(users.router)
+app.include_router(qr_moe.router)
+app.include_router(dce_analyze_v6_compat.router)
+app.include_router(pab_detector.router)
+app.include_router(post_gagne_tracker.router)
+app.include_router(memoire_booster.router)
+
 # TODO P0-6: Monter les endpoints suivants après refactorisation de leurs dépendances
+# from app.api.v1.endpoints import dce_analyze, dce_analyze_v7, handoff, pricing, reports, variants, missions_v7
 # app.include_router(dce_analyze.router)
 # app.include_router(dce_analyze_v7.router)
 # app.include_router(handoff.router)
