@@ -39,6 +39,9 @@ email-validator>=2.1.0
 # HTTP client (healthcheck, tests)
 httpx>=0.27.0
 
+# MCP Server (Integration Cursor/Claude Desktop)
+mcp>=1.0.0
+
 # OCR (V7) - Optional (heavy dependencies)
 # docling[all]>=0.20.0
 

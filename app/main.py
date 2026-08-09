@@ -79,6 +79,10 @@ app.add_middleware(
 # Middleware RBAC : strip financier global pour les rôles non autorisés
 app.add_middleware(RBACFinancialStripMiddleware)
 
+# Middleware Audit Trail : traçabilité des accès financiers
+from app.api.middleware.audit_trail import AuditTrailMiddleware
+app.add_middleware(AuditTrailMiddleware)
+
 # Inclure les routers
 app.include_router(health.router)
 app.include_router(missions.router)

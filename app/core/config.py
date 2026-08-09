@@ -130,7 +130,10 @@ class Settings(BaseSettings):
     UI_HOST: str = "0.0.0.0"
     UI_PORT: int = 8501
     
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore"  # Ignorer les variables d'environnement non définies dans le modèle
+    )
 
 
 @lru_cache()

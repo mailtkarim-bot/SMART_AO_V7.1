@@ -89,17 +89,35 @@ async def _create_mission(
     context: Dict[str, Any] = None,
     priority: str = "NORMALE",
 ) -> Dict[str, Any]:
-    '''Créer une nouvelle mission.'''
-    # TODO: Intégrer avec API ou WorkflowEngine
-    return {
-        "status": "created",
-        "mission_id": f"mission_{project_id[:6]}",
-        "project_id": project_id,
-        "documents": documents or [],
-        "context": context or {},
-        "priority": priority,
-        "message": "Mission created successfully",
-    }
+    '''Créer une nouvelle mission via WorkflowEngine.'''
+    from app.engines.workflow_engine.workflow import WorkflowEngine
+    from app.models.mission import Mission
+    
+    try:
+        engine = WorkflowEngine()
+        mission = await engine.create_mission(
+            project_id=project_id,
+            document_ids=documents or [],
+            context=context or {},
+            priority=priority
+        )
+        
+        return {
+            "status": "success",
+            "mission_id": mission.id,
+            "project_id": project_id,
+            "documents": documents or [],
+            "context": context or {},
+            "priority": priority,
+            "message": "Mission créée avec succès"
+        }
+    except Exception as e:
+        logger.error(f"Erreur création mission: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "message": "Échec de la création de mission"
+        }
 
 
 async def _list_missions(
@@ -107,47 +125,119 @@ async def _list_missions(
     limit: int = 100,
     offset: int = 0,
 ) -> Dict[str, Any]:
-    '''Lister toutes les missions.'''
-    # TODO: Intégrer avec API
-    return {
-        "missions": [],
-        "total": 0,
-        "limit": limit,
-        "offset": offset,
-    }
+    '''Lister toutes les missions depuis la base.'''
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from app.db.session import get_db_session
+    from app.models.mission import Mission
+    
+    try:
+        async with get_db_session() as session:
+            query = select(Mission)
+            if status:
+                query = query.where(Mission.status == status)
+            query = query.offset(offset).limit(limit)
+            
+            result = await session.execute(query)
+            missions = result.scalars().all()
+            
+            return {
+                "missions": [
+                    {
+                        "id": m.id,
+                        "project_id": m.project_id,
+                        "status": m.status,
+                        "priority": m.priority,
+                        "created_at": m.created_at.isoformat()
+                    }
+                    for m in missions
+                ],
+                "total": len(missions),
+                "limit": limit,
+                "offset": offset
+            }
+    except Exception as e:
+        logger.error(f"Erreur liste missions: {e}")
+        return {"missions": [], "total": 0, "error": str(e)}
 
 
 async def _get_mission(mission_id: str) -> Dict[str, Any]:
-    '''Récupérer une mission spécifique.'''
-    # TODO: Intégrer avec API
-    return {
-        "id": mission_id,
-        "project_id": "PROJ-001",
-        "status": "PENDING",
-        "documents": [],
-        "context": {},
-        "priority": "NORMALE",
-    }
+    '''Récupérer une mission spécifique depuis la base.'''
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from app.db.session import get_db_session
+    from app.models.mission import Mission
+    from sqlalchemy import select
+    
+    try:
+        async with get_db_session() as session:
+            result = await session.execute(
+                select(Mission).where(Mission.id == mission_id)
+            )
+            mission = result.scalar_one_or_none()
+            
+            if not mission:
+                return {"error": "Mission non trouvée", "status": "not_found"}
+            
+            return {
+                "id": mission.id,
+                "project_id": mission.project_id,
+                "status": mission.status,
+                "documents": [d.id for d in mission.documents],
+                "context": mission.context,
+                "priority": mission.priority,
+                "workflow_state": mission.workflow_state,
+                "created_at": mission.created_at.isoformat(),
+                "updated_at": mission.updated_at.isoformat()
+            }
+    except Exception as e:
+        logger.error(f"Erreur récupération mission: {e}")
+        return {"error": str(e), "status": "error"}
 
 
 async def _execute_workflow(mission_id: str) -> Dict[str, Any]:
-    '''Exécuter le workflow pour une mission.'''
-    # TODO: Intégrer avec WorkflowEngine
-    return {
-        "mission_id": mission_id,
-        "execution_id": f"exec_{mission_id}",
-        "status": "STARTED",
-        "started_at": "2026-08-05T12:00:00",
-    }
+    '''Exécuter le workflow pour une mission via WorkflowEngine.'''
+    from app.engines.workflow_engine.workflow import WorkflowEngine
+    
+    try:
+        engine = WorkflowEngine()
+        execution = await engine.execute_workflow(mission_id)
+        
+        return {
+            "mission_id": mission_id,
+            "execution_id": execution.id,
+            "status": "STARTED",
+            "started_at": execution.started_at.isoformat(),
+            "message": "Workflow démarré avec succès"
+        }
+    except Exception as e:
+        logger.error(f"Erreur exécution workflow: {e}")
+        return {
+            "mission_id": mission_id,
+            "status": "ERROR",
+            "error": str(e)
+        }
 
 
 async def _get_workflow_status(mission_id: str) -> Dict[str, Any]:
-    '''Récupérer le statut du workflow.'''
-    # TODO: Intégrer avec WorkflowEngine
-    return {
-        "mission_id": mission_id,
-        "current_step": "PARSER",
-        "total_steps": 6,
-        "completed_steps": 0,
-        "status": "PENDING",
-    }
+    '''Récupérer le statut du workflow depuis WorkflowEngine.'''
+    from app.engines.workflow_engine.workflow import WorkflowEngine
+    
+    try:
+        engine = WorkflowEngine()
+        status = await engine.get_workflow_status(mission_id)
+        
+        return {
+            "mission_id": mission_id,
+            "current_step": status.current_step,
+            "total_steps": status.total_steps,
+            "completed_steps": status.completed_steps,
+            "status": status.overall_status,
+            "progress_percent": int((status.completed_steps / status.total_steps) * 100) if status.total_steps > 0 else 0,
+            "last_updated": status.last_updated.isoformat() if status.last_updated else None
+        }
+    except Exception as e:
+        logger.error(f"Erreur statut workflow: {e}")
+        return {
+            "mission_id": mission_id,
+            "status": "ERROR",
+            "error": str(e)
+        }

@@ -66,7 +66,19 @@ class BGEEmbeddingProvider:
         # Fallback : zéro external dependency
         self._backend = "fallback"
         self._model = "fallback"
-        logger.warning("BGE-M3 fallback activé (embeddings aléatoires normalisés)")
+        
+        # BLOQUANT PRODUCTION : En prod, le fallback aléatoire est interdit
+        import os
+        env = os.getenv("APP_ENVIRONMENT", "development")
+        if env == "production":
+            logger.error("BGE-M3 indisponible en production - ARRÊT OBLIGATOIRE")
+            raise RuntimeError(
+                "CRITIQUE: Modèle BGE-M3 indisponible en production. "
+                "Les embeddings aléatoires sont interdits en production car ils génèrent des analyses RAG incohérentes. "
+                "Veuillez installer sentence-transformers ou flag_embedding avant de démarrer."
+            )
+        
+        logger.warning("BGE-M3 fallback activé (embeddings aléatoires normalisés) - UNIQUEMENT POUR TESTS/DEV")
 
     def get_dimension(self) -> int:
         return DEFAULT_DIM

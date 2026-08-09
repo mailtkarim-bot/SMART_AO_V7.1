@@ -26,6 +26,7 @@ import hashlib
 import logging
 
 from app.core.security import get_current_user
+from app.api.middleware.auth import require_financial_access
 from app.core.config import settings
 from app.engines.knowledge_engine.rag_hybrid import (
     get_rag_engine, rag_search_for_agent, DocumentChunk, RAGResponse
@@ -47,6 +48,7 @@ async def index_document(
     document_type: Optional[str] = Form(None, description="Type of document (DCE, CCAP, DPGF, etc.)"),
     metadata: Optional[str] = Form(None, description="JSON metadata"),
     current_user: Dict[str, Any] = Depends(get_current_user),
+    _: dict = Depends(require_financial_access),
 ):
     """
     Indexer un document dans le système RAG pour recherche sémantique.
@@ -170,6 +172,7 @@ async def index_document(
 async def index_documents_batch(
     documents: List[Dict[str, Any]],
     current_user: Dict[str, Any] = Depends(get_current_user),
+    _: dict = Depends(require_financial_access),
 ):
     """
     Indexer plusieurs documents en une seule requête.
@@ -231,6 +234,7 @@ async def search_rag(
     query: str,
     top_k: int = 5,
     current_user: Dict[str, Any] = Depends(get_current_user),
+    _: dict = Depends(require_financial_access),
 ):
     """
     Rechercher dans les documents indexés via RAG Hybrid.
@@ -284,6 +288,7 @@ async def search_rag(
 async def search_rag_post(
     query_data: Dict[str, Any],
     current_user: Dict[str, Any] = Depends(get_current_user),
+    _: dict = Depends(require_financial_access),
 ):
     """
     Rechercher avec une requête complexe (POST).
@@ -344,6 +349,7 @@ async def search_rag_post(
 async def delete_document_rag(
     document_id: str,
     current_user: Dict[str, Any] = Depends(get_current_user),
+    _: dict = Depends(require_financial_access),
 ):
     """
     Supprimer un document de l'index RAG et de Qdrant.
@@ -402,6 +408,7 @@ async def delete_document_rag(
 @router.get("/status", summary="Get RAG Status", response_model=Dict[str, Any])
 async def get_rag_status(
     current_user: Dict[str, Any] = Depends(get_current_user),
+    _: dict = Depends(require_financial_access),
 ):
     """
     Obtenir l'état du système RAG.
