@@ -40,6 +40,7 @@ Thumbs.db
 coverage/
 htmlcov/
 .coverage
+coverage.xml
 
 # Compressed files
 *.zip
