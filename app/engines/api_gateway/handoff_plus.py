@@ -20,7 +20,7 @@ import json
 from app.db.session import get_db
 from app.models.mission import Mission
 from app.models.user import User
-from app.api.middleware.rbac_strip import require_authenticated, get_current_user
+from app.core.auth import get_current_user
 from app.engines.workflow_engine.workflow import WorkflowEngine
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ async def transfer_mission(
     mission_id: int,
     request: TransferRequest,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(require_authenticated),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -178,9 +178,16 @@ def build_handoff_package(
     
     # Inclure DCE brut si demandé
     if context.include_raw_dce and mission.fichier_dce_path:
+        import os
+        try:
+            file_size_bytes = os.path.getsize(mission.fichier_dce_path)
+            file_size_mb = round(file_size_bytes / (1024 * 1024), 2)
+        except (OSError, TypeError):
+            file_size_mb = 0
+        
         package["raw_dce"] = {
             "path": mission.fichier_dce_path,
-            "size_mb": 0,  # TODO: Calculer taille réelle
+            "size_mb": file_size_mb,
             "pages": mission.nb_pages or 0
         }
     
@@ -195,11 +202,32 @@ def build_handoff_package(
     
     # Inclure analyse des agents
     if context.include_agent_analysis:
-        # TODO: Récupérer analyses agents depuis DB
-        package["agent_analysis"] = {
-            "status": "included",
-            "agents_count": 0
-        }
+        # Récupérer analyses agents depuis les steps de la mission
+        try:
+            agent_steps = [
+                step for step in mission.steps 
+                if step.agent_name and step.output_data
+            ]
+            agents_data = {
+                step.agent_name: {
+                    "status": step.status,
+                    "execution_time_ms": step.execution_time_ms,
+                    "output_summary": step.output_data.get("summary", "") if step.output_data else ""
+                }
+                for step in agent_steps
+            }
+            package["agent_analysis"] = {
+                "status": "included",
+                "agents_count": len(agent_steps),
+                "agents": agents_data
+            }
+        except Exception as e:
+            logger.warning(f"Failed to retrieve agent analysis: {e}")
+            package["agent_analysis"] = {
+                "status": "error",
+                "agents_count": 0,
+                "error": str(e)
+            }
     
     # Inclure simulations financières
     if context.include_financial_simulations:
@@ -262,7 +290,7 @@ async def send_transfer_notifications(
 @router.get("/{mission_id}/history", response_model=dict)
 async def get_transfer_history(
     mission_id: int,
-    current_user: User = Depends(require_authenticated),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Récupère l'historique des transferts d'une mission"""
@@ -277,23 +305,45 @@ async def get_transfer_history(
             detail=f"Mission {mission_id} non trouvée"
         )
     
-    # TODO: Implémenter historique complet dans DB
+    # Implémenter historique complet - récupérer tous les transferts depuis les events
+    from app.models.events import MissionEvent
+    
+    result = await db.execute(
+        select(MissionEvent).where(
+            MissionEvent.mission_id == mission_id,
+            MissionEvent.event_type == "transfer"
+        ).order_by(MissionEvent.created_at.desc())
+    )
+    transfer_events = result.scalars().all()
+    
+    transfers = []
+    if mission.transferred_at:
+        transfers.append({
+            "timestamp": mission.transferred_at.isoformat(),
+            "from_user_id": mission.transfer_source_id,
+            "to_user_id": mission.user_id,
+            "type": "current"
+        })
+    
+    for event in transfer_events:
+        transfers.append({
+            "timestamp": event.created_at.isoformat() if event.created_at else None,
+            "from_user_id": event.data.get("from_user_id") if event.data else None,
+            "to_user_id": event.data.get("to_user_id") if event.data else None,
+            "type": "event",
+            "message": event.data.get("message") if event.data else None
+        })
+    
     return {
         "mission_id": mission_id,
-        "transfers": [
-            {
-                "timestamp": mission.transferred_at.isoformat() if mission.transferred_at else None,
-                "from_user_id": mission.transfer_source_id,
-                "to_user_id": mission.user_id
-            }
-        ] if mission.transferred_at else []
+        "transfers": transfers
     }
 
 
 @router.post("/accept/{mission_id}", response_model=dict)
 async def accept_transfer(
     mission_id: int,
-    current_user: User = Depends(require_authenticated),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Accepte un transfert de mission"""

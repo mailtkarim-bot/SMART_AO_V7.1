@@ -237,7 +237,7 @@ C'est l'unique définition RBAC financier. Autres docs RÉFÈRENT cette section.
 
 **Implémentation RBAC unique:**
 - Backend: deps.py `require_admin` + `strip_provisions_euros(obj)` masque récursif champs: total_ht, marge, ae_total, treasury, provision_euros, cout_rep, exposition_penalites, bfr_pic, cout_caution, provision_amiante, provision_omission, cout_tresorerie, provision_site, montant_marche_ht, pic_bfr, marge_nette, cout_ss4.
-- Frontend: test_front_no_price_leak.spec.ts scan DOM salarié 33 modules regex € `/(\d+\s?€|\bEUR\b|k€|provision|marge)/i` = 0 occurrence.
+- Frontend: test_front_no_price_leak.spec.ts scan DOM salarié 28 modules regex € `/(\d+\s?€|\bEUR\b|k€|provision|marge)/i` = 0 occurrence.
 - Double artefact HANDOFF: génération 2 PDFs physiquement séparés — BOOK_CHANTIER_COMPLET_ADMIN.pdf avec marges/provisions/BFR coffre-fort Admin / BOOK_CHANTIER_EXECUTION_SALARIE.pdf sans aucune donnée €.
 
 ### 3.2 Workflow Lifecycle 12 États — State Machine Unique
@@ -481,8 +481,8 @@ Async worker Celery/Redis AOF. Upload -> PyMuPDF+pdfplumber parse <2s/page -> Do
 **Moteur 2: ADN Extractor**
 RAG + LLM Mistral EU structuré: extrait 50 contraintes spécifiques CCTP (ex: "bruit <45dB chantier école occupé + poussière <10mg/m3 + horaires 8h-12h + accès <2.5m + hauteur sous plafond 3.2m + RE2020 + ...") + distance agence-chantier + nom conducteur + spécificités climatiques commune. Output JSON strict sans hallucination €. Utilisé par Mémoire Booster 18/20.
 
-**Moteur 3: DCE Trap Detector — 4 Familles (Base + Routage vers 33 modules)**
-Agent RAG multi-agents CCAG 2021, CCP, DTU. Lit N'IMPORTE QUEL DCE (AP-HP 412p, NOVO centrale groupes électrogènes...) et détecte pièges. Classification 4 familles originelles + routage 33 modules (§7.1-7.33):
+**Moteur 3: DCE Trap Detector — 4 Familles (Base + Routage vers 28 modules)**
+Agent RAG multi-agents CCAG 2021, CCP, DTU. Lit N'IMPORTE QUEL DCE (AP-HP 412p, NOVO centrale groupes électrogènes...) et détecte pièges. Classification 4 familles originelles + routage 28 modules (§7.1-7.28):
 - Famille 1 Pièces Contractuelles & Risques Juridiques: GME solidarité (§7.4), CCTP marques impératives R2111-7 (§7.9), CCAP pénalités (§7.2), clause butoir (§7.1), PAB (§7.16), variantes (§7.15), délais (§7.13)
 - Famille 2 Aspects Techniques & Site: RAT amiante <1997 (§7.6), site occupé accès hauteur (§7.8), SOGED REP (§7.7), E+C- (§7.28)
 - Famille 3 Financiers & Quantitatifs: BT index sans butoir (§7.1), BFR avance/RG (§7.3), DPGF vs CCTP incohérences (§7.9), matériaux post-Covid (§7.17), capacité financière (§7.24)
@@ -684,9 +684,9 @@ Argumentaire: Souveraineté + Vitesse objectif usage + Fiabilité objectif rédu
 ---
 
 
-## 7. SECTION COEUR — SPÉCIFICATIONS FONCTIONNELLES DÉTAILLÉES DES 33 MODULES — SOURCE UNIQUE ABSOLUE
+## 7. SECTION COEUR — SPÉCIFICATIONS FONCTIONNELLES DÉTAILLÉES DES 28 MODULES — SOURCE UNIQUE ABSOLUE
 
-> **RÈGLE CRITIQUE :** Cette section 7 est la SEULE définition fonctionnelle complète des 33 modules. Pour chaque module 7.1 à 7.33, une seule description complète avec Trigger, Entrées DCE, IA Qualitative ZERO €, Solver Garage Exact, Référentiels, Vue Salarié Sans €, Action Patron Avec €, Générateurs Output, Risque Si Non Détecté. Aucune duplication ailleurs. Autres docs citent "Voir RAPPORT section 7.X"
+> **RÈGLE CRITIQUE :** Cette section 7 est la SEULE définition fonctionnelle complète des 28 modules. Pour chaque module 7.1 à 7.28, une seule description complète avec Trigger, Entrées DCE, IA Qualitative ZERO €, Solver Garage Exact, Référentiels, Vue Salarié Sans €, Action Patron Avec €, Générateurs Output, Risque Si Non Détecté. Aucune duplication ailleurs. Autres docs citent "Voir RAPPORT section 7.X".
 
 
 ### 7.1 Module 7.1 — BT Index Guardian / Indice Inflation Piège (Le tueur de marge lente)
@@ -2091,7 +2091,7 @@ Frontend: test_front_no_handoff_leak.spec.ts vérifie conducteur ne peut pas dev
 | **7.27 O MAPA Generator** | RC procédure adaptée, Vault A01-A12 | Détection MAPA + extraction format + pièces exigées | Assemblage documentaire auto | — | Wizard 4 étapes MAPA simplifié + pré-remplissage Vault | Génération dossier MAPA complet PDF + ZIP + vérification complétude | Dossier MAPA PDF 10-15p + ZIP dépôt prêt + checklist MAPA |
 | **7.28 P Label E+C- Detector** | RC/annexes E+C-, CCTP RE2020 | Détection label E+C- niveau E2C1/E3C2 + justificatifs manquants | Calcul empreinte carbone vs seuil niveau + comparaison | seuils_eplusc.json, fdes_produits_btp.json | Badge "Label E+C- détecté — Justificatifs à préparer" | Dashboard niveau visé vs atteignable + génération justificatifs | Attestation E+C- PDF + calcul ACV Excel + fiches FDES + recommandation DOCX |
 
-**Conclusion Architecturale tableau:** SMART_AO n'est pas outil chiffrage. C'est système arme juridique et financière. Salarié apporte intelligence terrain, IA vigilance exhaustive ZERO €, Garage Math vérité des euros Decimal, Patron garde clé coffre RBAC. Avec 33 modules, on couvre l'intégralité de la chaîne: veille → dépôt sans erreur → marge protégée → note maximale → chantier sécurisé → contentieux géré.
+**Conclusion Architecturale tableau:** SMART_AO n'est pas outil chiffrage. C'est système arme juridique et financière. Salarié apporte intelligence terrain, IA vigilance exhaustive ZERO €, Garage Math vérité des euros Decimal, Patron garde clé coffre RBAC. Avec 28 modules, on couvre l'intégralité de la chaîne: veille → dépôt sans erreur → marge protégée → note maximale → chantier sécurisé → contentieux géré.
 
 ---
 
@@ -2452,7 +2452,7 @@ Garantie: Voir MANIFESTE - objectif usage pas garantie chiffrée.
 12. **Golden Files 3×400p DCE réels parse <5min:** 3 DCE réels 400p chaque parse complet <5min.
 13. **test_28_agents_trap_detector.py vert:** 28 agents IA qualitative ZERO € avec JSON sans € + confiance >0.8. Aucun agent ne calcule €.
 14. **test_16_solveurs_vert:** 16 solveurs Garage Decimal exact, to_decimal(str), 0 import LLM, tests unitaires avec cas limites + référentiels JSON existants.
-15. **test_rbac_provisions.py vert:** Aucune provision € visible salarié sur 33 modules + regex scans DOM + API scan + serializer strip + double artefact test provision.
+15. **test_rbac_provisions.py vert:** Aucune provision € visible salarié sur 28 modules + regex scans DOM + API scan + serializer strip + double artefact test provision.
 16. **test_handoff_double_artefact.py vert:** Double PDF générés physiquement distincts + 0 occurrence € ni marge dans version salariée + checksum distincts + 2 artefacts log.
 17. **test_agent_no_euro.py vert:** Scan code 28 agents IA aucun calcul €, aucun regex €, aucun champ provision/marge généré côté IA.
 18. **V6 test_deadline_guardian.py vert:** Blocage dépôt si pièce manquante ou délai dépassé + compte à rebours exact.
@@ -2529,7 +2529,7 @@ Voir RAPPORT §12 pour gate bloquant check_go_nogo.sh vert.
 
 17. **test_agent_no_euro.py vert:** Scan code 12 agents IA aucun calcul €, aucun regex €, aucun champ provision/marge généré côté IA - preuve que IA ne calcule pas euros - seulement Garage.
 
-**Fleet 46 critères (38 +8 V7.1):** 38 Fleet = 12 ci-dessus + ClamAV EICAR Fleet, Golden Files 3×400p Fleet 3 clients, Qdrant isolation 0 cross-tenant, MinIO isolation, Postgres isolation, Redis isolation, backup fleet chiffré, restore fleet <30min, monitoring fleet Prometheus, log fleet centralisé sans donnée métier, etc. + mêmes 8 V7.1 ci-dessus.
+**Fleet 24 critères (19 +5 ci-dessus):** 19 Fleet = 12 ci-dessus + ClamAV EICAR Fleet, Golden Files 3×400p Fleet 3 clients, Qdrant isolation 0 cross-tenant, MinIO isolation, Postgres isolation, Redis isolation, backup fleet chiffré, restore fleet <30min, monitoring fleet Prometheus, log fleet centralisé sans donnée métier, etc. + mêmes 5 ci-dessus.
 
 **Gate BLOQUANT:** Si un critère rouge, interdiction 1er client payant. Script `app/scripts/check_go_nogo.sh` et `check_go_nogo_fleet.sh` = vert obligatoire.
 
@@ -2548,7 +2548,7 @@ Voir RAPPORT §12 pour gate bloquant check_go_nogo.sh vert.
 - Pour **promesse commerciale, positionnement offensif, prix formule unique, slogan interdit, argumentaire, garanties** → Voir **MANIFESTE.md** (commercial pur, pas de technique modules — réfère §7).
 - Pour **Vault A01-A12 détails documents + pipeline J-30** → Ce document §4 source fonctionnelle, Handbook source technique.
 - Pour **Finance Warfare 5 tuiles** → Ce document §10 fonctionnel + Handbook contrats API `/api/finance-warfare/*`.
-- Pour **33 modules détaillés** → Ce document §7 source unique fonctionnelle.
+- Pour **28 modules détaillés** → Ce document §7 source unique fonctionnelle.
 
 **Règle inter-doc stricte:**
 - Si conflit fonctionnel module (Trigger/IA/Garage/Vue Salarié/Action Patron) → **RAPPORT §7 gagne.**
@@ -2557,7 +2557,7 @@ Voir RAPPORT §12 pour gate bloquant check_go_nogo.sh vert.
 
 ### 13.2 Règles d'Or pour l'Avenir (Maintenabilité — Non Négociable)
 
-1. **33 modules:** Toute modification module (Trigger, IA, Garage, Vue, Action) ne doit être faite QUE dans RAPPORT.md section 7.X. Autres docs citent référence croisée uniquement "Voir RAPPORT section 7.X" — ZÉRO copier-coller. Si vous voyez définition module ailleurs, c'est une erreur bloquante à corriger.
+1. **28 modules:** Toute modification module (Trigger, IA, Garage, Vue, Action) ne doit être faite QUE dans RAPPORT.md section 7.X. Autres docs citent référence croisée uniquement "Voir RAPPORT section 7.X" — ZÉRO copier-coller. Si vous voyez définition module ailleurs, c'est une erreur bloquante à corriger.
 
 2. **Pas de tableaux récap en double:** Un seul tableau récap autorisé dans tout pack: celui de RAPPORT section 8. Supprimer tableaux récap en double dans MANIFESTE, HANDBOOK, ARBO.
 
@@ -2621,7 +2621,7 @@ Cette édition V6 Fusion transforme SMART_AO de détecteur vices forme en **syst
 
 **C'est l'étanchéité financière qui fait confiance Patron:** Aucune provision € visible salarié = Patron peut déléguer sans peur fuite marge vers salariés/centre travaux. Tests `test_api_employee_cannot_see_prices` + `test_rbac_provisions` + `test_handoff_double_artefact` + `test_front_no_price_leak` verts bloquants.
 
-**C'est le calcul exact 16 solveurs + INSEE ADEME Météo France qui fait différence entre marché gagné et chantier qui tue entreprise:** Exemples réels intégrés: BT sans butoir -47k€, pénalités sans plafond 124k€ 12% CA, BFR -180k€ pic M4-6, solidarité élargie 180k€, DC4 cumul 62% >50%, RAT manquant 18.5k€ SS4, REP 4.2k€, site occupé +15% MO 18k€ +2 sem, oublis DPGF 3.1k€ + écarts 18.2k€, Q/R enjeu 288k€ neutralisable, acier +40% 90k€, PAB -27% risque élimination, RSE -3 points/20, visite oubliée = 0€, DC1 dans offre = élimination, avenant oublié 30k€, recours non fait = 1M€ perdu.
+**C'est le calcul exact 11 solveurs + INSEE ADEME Météo France qui fait différence entre marché gagné et chantier qui tue entreprise:** Exemples réels intégrés: BT sans butoir -47k€, pénalités sans plafond 124k€ 12% CA, BFR -180k€ pic M4-6, solidarité élargie 180k€, DC4 cumul 62% >50%, RAT manquant 18.5k€ SS4, REP 4.2k€, site occupé +15% MO 18k€ +2 sem, oublis DPGF 3.1k€ + écarts 18.2k€, Q/R enjeu 288k€ neutralisable, acier +40% 90k€, PAB -27% risque élimination, RSE -3 points/20, visite oubliée = 0€, DC1 dans offre = élimination, avenant oublié 30k€, recours non fait = 1M€ perdu.
 
 **Workflow V6 complet:** DCE déposé → 28 modules IA + 11 solveurs Garage → Go/No-Go 24 critères chiffré sécurisé → Métré temps corrigé site → SOGED → Mémoire Booster 18/20 avec preuves A08 <50km + Gantt Météo France + RE2020 + matrice RC → Q/R tactique 8 questions opposables → Docs Admin DC1/DC4 génération + Finance Warfare Dashboard 5 tuiles provisions à valider + Deadline Guardian + Alloti Guardian + Enveloppe Separator + Certif Live Checker + Visite Auto + PAB Detector + Matériaux Shield + RSE Booster + Variante Guardian + Prix-Mémoire Coherence → Handoff → Chiffrage Admin validation provisions → ZIP 3 enveloppes + Mémoire + SOGED + DC4 + Q/R → Dépôt Profil Acheteur → Statut GAGNE → HANDOFF+ Book 30p double artefact expurgé/complet + Post-Gagné Tracker échéances → Contentieux Generator si besoin → Chantier sécurisé.
 
@@ -2886,11 +2886,11 @@ Voir Handbook pour 23+ ADR techniques.
 - **Build 3 — DCE Trap Detector 4 Familles:** 28 agents RAG CCAG/CCP/DTU, classification 4 familles, JSON traps, wizard étape 3. Gate 3: 28 agents vert agent_no_euro.
 - **Build 3.5 — Garage Math Historique + Excel + FileLock:** Port BTP ENGINE ChiffrageEngine, chiffrage_pulp, treasury, planning_ortools, coeff_site v1, Excel MCP FileLock single worker versioning10 validate_header. Gate 3.5: 5 solveurs histo + Excel vert no LLM import.
 - **Build 4 — Wizard Salarié 10 étapes + Cockpit Admin 8 tuiles + RBAC financier + Strip:** Wizard 10 étapes UX 1 bouton + cockpit + RBAC strip_provisions_euros + test_front_no_price_leak. Gate 4: RBAC + wizard vert.
-- **Build 4.5 — 10+ Solveurs Garage Étendus + Référentiels INSEE/ADEME/Météo/Matériaux/E+C-/Financiers:** bt_projection, penalites_cumul, rep_cost, site_coeff v2, incoherence_solver, capacite_financiere, pab_detector, materiaux_shield, eplusc_calculator, risques_generator. Gate 4.5: 16 solveurs vert Decimal exact.
-- **Build 5 — 33 Modules Avancés Anti-Faillite + Anti-Élimination fonctionnel:** Implémentation fonctionnelle 33 modules (Trigger/IA/Garage/Vues/Action) + Finance Warfare Dashboard 5 tuiles + Q/R tactique generator + Vault Dashboard + SOGED + RAT + Site + Cross-Check + Deadline + Alloti + RSE + Coherence + Variante + Matériaux + PAB + Visite + Enveloppe + Post-Gagné + Contentieux + Certif + Capacité + Tableau Risques + MAPA + E+C- + Pénurie RH + Pénibilité RH + Vigilance URSSAF + ZAN Trackterres + Syntax Checker + Sourcing API. Gate 5: 33 modules vert + RBAC provisions + Finance Warfare.
+- **Build 4.5 — 10+ Solveurs Garage Étendus + Référentiels INSEE/ADEME/Météo/Matériaux/E+C-/Financiers:** bt_projection, penalites_cumul, rep_cost, site_coeff v2, incoherence_solver, capacite_financiere, pab_detector, materiaux_shield, eplusc_calculator, risques_generator. Gate 4.5: 11 solveurs vert Decimal exact.
+- **Build 5 — 28 Modules Avancés Anti-Faillite + Anti-Élimination fonctionnel:** Implémentation fonctionnelle 28 modules (Trigger/IA/Garage/Vues/Action) + Finance Warfare Dashboard 5 tuiles + Q/R tactique generator + Vault Dashboard + SOGED + RAT + Site + Cross-Check + Deadline + Alloti + RSE + Coherence + Variante + Matériaux + PAB + Visite + Enveloppe + Post-Gagné + Contentieux + Certif + Capacité + Tableau Risques + MAPA + E+C-. Gate 5: 28 modules vert + RBAC provisions + Finance Warfare.
 - **Build 6 — Mémoire Booster 18/20 + MCP BOAMP/PLACE + MCP Interne Filesystem/Pricing:** generator_memoire avec A08 <50km + Gantt Météo France OR-Tools + RE2020 FDES + matrice RC + MCP BOAMP 3 tools + Filesystem MCP 13 tools + Pricing Memory 4 tools + host.py. Gate 6: mémoire + MCP vert.
-- **Build 7 — HANDOFF+ Double Artefact + Handoff Dashboard + Go/No-Go 39 critères + ClamAV + Backup/Restore + Cosign:** generator_handoff double artefacts physiquement distincts + Handoff Dashboard double log + check_go_nogo.sh 39 critères vert + ClamAV EICAR + backup/restore <15min + cosign verify. Gate 7: HANDOFF double artefact + Go/No-Go 39 vert + backup vert.
-- **Build 8 — Fleet 46 critères + Golden Files 3×400p DCE + Monitoring Prometheus + Heartbeat whitelist 0 métier:** Fleet isolation tests, 3 golden files parse <5min, Prometheus/Grafana/Loki sans donnée métier, heartbeat whitelist test. Gate 8 Fleet: 46 critères vert + fleet tests vert.
+- **Build 7 — HANDOFF+ Double Artefact + Handoff Dashboard + Go/No-Go 24 critères + ClamAV + Backup/Restore + Cosign:** generator_handoff double artefacts physiquement distincts + Handoff Dashboard double log + check_go_nogo.sh 24 critères vert + ClamAV EICAR + backup/restore <15min + cosign verify. Gate 7: HANDOFF double artefact + Go/No-Go 24 vert + backup vert.
+- **Build 8 — Fleet 31 critères + Golden Files 3×400p DCE + Monitoring Prometheus + Heartbeat whitelist 0 métier:** Fleet isolation tests, 3 golden files parse <5min, Prometheus/Grafana/Loki sans donnée métier, heartbeat whitelist test. Gate 8 Fleet: 31 critères vert + fleet tests vert.
 
 Voir PLAN_MAITRE_V7.1 §6 pour graphe dépendances + gates détaillés.
 
@@ -2919,7 +2919,7 @@ Voir PLAN_MAITRE_V7.1 §6 pour graphe dépendances + gates détaillés.
 - test_handoff_double_artefact.py (0 € expurgé + 2 artefacts checksum)
 - test_agent_no_euro.py (agents IA 0 calcul €)
 - test_handoff_irreversible.py (seul Admin GAGNE)
-- test_front_no_price_leak.spec.ts (DOM 33 modules 0 €)
+- test_front_no_price_leak.spec.ts (DOM 28 modules 0 €)
 - test_front_no_handoff_leak.spec.ts (URL admin non devinable salarié)
 - **V6:** test_deadline_guardian.py
 - **V6:** test_alloti_guardian.py
@@ -2954,7 +2954,7 @@ Exemple marché type:
 - Code single-tenant pur vérifiable (0 tenant_id).
 - Aucune donnée ne sort VPS sans opt-in explicite disclaimer RGPD.
 - Chaque euro calculé Garage Decimal exact jamais LLM.
-- Tests Go/No-Go 39 critères bloquants avant 1er client payant (responsabilité).
+- Tests Go/No-Go 24 critères bloquants avant 1er client payant (responsabilité).
 - Documentation maintenable (ce doc) + 5 docs complémentaires sans doublon.
 - Formation 2h salarié + 2h Admin cockpit.
 - Support souverain EU.
@@ -3246,7 +3246,7 @@ Si module BT Guardian défini ici §7.1, interdiction redéfinir ailleurs foncti
 
 ### T.2 Taille Cible Respectée par Fichier
 - MANIFESTE.md 10-15p 30-50KB max commercial pur pas technique.
-- RAPPORT (ce doc) 100-150p 300-400KB exhaustif source unique 33 modules détaillés Trigger/IA/Garage/Vue/Action + tableau recap unique §8 + garage + dashboards + Go/No-Go + conclusion.
+- RAPPORT (ce doc) 100-150p 300-400KB exhaustif source unique 28 modules détaillés Trigger/IA/Garage/Vue/Action + tableau recap unique §8 + garage + dashboards + Go/No-Go + conclusion.
 - ENGINEERING-HANDBOOK.md 40-60p 120-180KB technique pur 23+ ADR + C4 + invariants single-tenant + schemas + contrats API + mem_limit + code snippets + tests + infra.
 - PLAN_MAITRE_V7.1.md 25-30p 60-80KB Build Chain + Pilotage + Roadmap (ex-MES + PLAN_CODAGE fusionnés).
 - Arborescence_V7.1.txt liste unique propre alphabétique 368 fichiers.
@@ -3277,7 +3277,7 @@ SMART_AO V6 transforme ces en JSON + Garage Math Decimal exact + provision à va
 C'est système arme marge, pas outil chiffrage.
 C'est étanchéité financière qui fait confiance Patron.
 C'est calcul exact INSEE ADEME Météo France qui fait différence entre marché gagné et chantier qui tue entreprise.
-C'est 33 boucliers pour ne plus jamais perdre un marché pour une connerie, et ne plus jamais signer sa propre faillite.
+C'est 28 boucliers pour ne plus jamais perdre un marché pour une connerie, et ne plus jamais signer sa propre faillite.
 
 **FIN ANNEXES A-U — COMPLEMENT EXHAUSTIF V6 FUSION.**
 
@@ -4355,10 +4355,10 @@ Pour que la V7.1 soit parfaitement rétro-compatible avec le succès commercial 
 ---
 
 ### Annexes A-U
-- A DCE Trap Detector 4 familles routage 33 modules
+- A DCE Trap Detector 4 familles routage 28 modules
 - B Vault A01-A12
 - C Cockpit 11 modules (8 + 3 V6)
-- D Wizard 12 étapes 33 modules
+- D Wizard 12 étapes 28 modules
 - E RAG Hybrid
 - F MCP
 - G Stack

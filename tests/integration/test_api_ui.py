@@ -49,7 +49,7 @@ class TestAPIUIIntegration:
         # L'UI a besoin de ces champs
         assert "status" in data
     
-    def test_api_missions_structure_for_ui(self):
+    def test_api_missions_structure_for_ui(self, override_auth_dependency):
         """Test que l'API missions a la structure attendue par l'UI."""
         response = client.get("/api/v1/missions")
         if response.status_code == 200:
@@ -57,7 +57,7 @@ class TestAPIUIIntegration:
             # L'UI attend ces champs
             assert "missions" in data or "total" in data or "items" in data
     
-    def test_api_agents_structure_for_ui(self):
+    def test_api_agents_structure_for_ui(self, override_auth_dependency):
         """Test que l'API agents a la structure attendue par l'UI."""
         response = client.get("/api/v1/agents")
         if response.status_code == 200:

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import logging
 from sqlalchemy.orm import Session
-from app.db.session import get_db
+from app.db.session import get_db, SessionLocal
 from app.models.mission import Mission
 from app.engines.notification_engine.email import email_engine
 

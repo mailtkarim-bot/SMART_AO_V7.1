@@ -19,6 +19,7 @@ import logging
 from app.core.database import get_db
 from app.models.mission import Mission
 from app.models.user import User
+from app.models.user_settings import UserSettings
 from app.core.auth import get_current_user
 from app.engines.notification_engine.deadline import DeadlineMonitor
 
@@ -60,7 +61,7 @@ class EscaladeConfig(BaseModel):
 
 @router.get("/status", response_model=DeadlineStatus)
 async def get_deadline_status(
-    current_user: User = Depends(require_authenticated),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -149,7 +150,7 @@ async def get_deadline_status(
 async def trigger_escalade(
     mission_id: int,
     config: EscaladeConfig,
-    current_user: User = Depends(require_authenticated),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -228,7 +229,7 @@ async def trigger_escalade(
 @router.get("/missions/{mission_id}/countdown", response_model=dict)
 async def get_countdown(
     mission_id: int,
-    current_user: User = Depends(require_authenticated),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -299,7 +300,7 @@ async def get_countdown(
 async def update_deadline_config(
     user_id: int,
     config: EscaladeConfig,
-    current_user: User = Depends(require_authenticated),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -307,13 +308,38 @@ async def update_deadline_config(
     
     Permet de personnaliser les seuils et canaux de notification
     """
-    # TODO: Implémenter la persistance dans UserSettings
-    logger.info(f"User {current_user.email} updated deadline config: {config}")
+    # Implémenter la persistance dans UserSettings
+    config_dict = config.model_dump()
+    
+    # Vérifier si UserSettings existe pour cet utilisateur
+    result = await db.execute(
+        select(UserSettings).where(UserSettings.user_id == user_id)
+    )
+    user_settings = result.scalar_one_or_none()
+    
+    if user_settings:
+        # Mettre à jour la configuration existante
+        user_settings.deadline_config = config_dict
+        user_settings.updated_at = datetime.utcnow()
+    else:
+        # Créer une nouvelle entrée
+        user_settings = UserSettings(
+            user_id=user_id,
+            deadline_config=config_dict,
+            preferences={}
+        )
+        db.add(user_settings)
+    
+    await db.commit()
+    await db.refresh(user_settings)
+    
+    logger.info(f"User {current_user.email} updated deadline config for user {user_id}: {config}")
     
     return {
         "user_id": user_id,
-        "config_updated": config.dict(),
-        "message": "Configuration sauvegardée avec succès"
+        "config_updated": config_dict,
+        "message": "Configuration sauvegardée avec succès",
+        "settings_id": user_settings.id
     }
 
 
@@ -321,7 +347,7 @@ async def update_deadline_config(
 async def get_deadline_calendar(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    current_user: User = Depends(require_authenticated),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """

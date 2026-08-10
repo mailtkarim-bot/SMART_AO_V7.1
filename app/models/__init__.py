@@ -22,6 +22,7 @@ from app.models.project import Project
 from app.models.mission import Mission, MissionStep, MissionStatus, MissionStepStatus
 from app.models.events import Event, EventType, MissionEvent
 from app.models.user import User, Role
+from app.models.user_settings import UserSettings
 
 __all__ = [
     "VaultDocument",
@@ -36,4 +37,5 @@ __all__ = [
     "MissionEvent",
     "User",
     "Role",
+    "UserSettings",
 ]

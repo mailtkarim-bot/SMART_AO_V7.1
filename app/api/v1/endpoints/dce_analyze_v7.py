@@ -6,22 +6,24 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks,
 from fastapi.responses import JSONResponse
 from typing import Optional, List
 import logging
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.schemas.mission import MissionCreate, MissionResponse
 from app.models.mission import Mission
-from app.db.session import get_db
-from sqlalchemy.orm import Session
+from app.models.user import User
+from app.core.database import get_db
+from app.core.auth import get_current_user, TokenData, require_admin_access
 from app.engines.workflow_engine.workflow import WorkflowEngine
-from app.security.rbac import require_auth
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/dce", tags=["DCE Analysis"])
+router = APIRouter(prefix="/dce-v7", tags=["DCE Analysis V7"])
 
 @router.post("/upload", response_model=MissionResponse)
 async def upload_dce(
     files: List[UploadFile] = File(...),
     background_tasks: BackgroundTasks = None,
-    db: Session = Depends(get_db),
-    current_user = Depends(require_auth)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin_access)
 ):
     """
     Upload d'un lot de fichiers DCE (ZIP ou PDF multiples)
@@ -45,8 +47,8 @@ async def upload_dce(
     )
     db_mission = Mission(**mission_data.dict())
     db.add(db_mission)
-    db.commit()
-    db.refresh(db_mission)
+    await db.commit()
+    await db.refresh(db_mission)
     
     # Lancement du workflow en background
     if background_tasks:
@@ -71,11 +73,22 @@ async def run_dce_analysis_workflow(mission_id: int, files: List[UploadFile]):
         await event_bus.publish("mission.failed", {"mission_id": mission_id, "error": str(e)})
 
 @router.get("/{mission_id}/status")
-async def get_analysis_status(mission_id: int, db: Session = Depends(get_db)):
+async def get_analysis_status(
+    mission_id: int, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Récupération du statut d'analyse en temps réel"""
-    mission = db.query(Mission).filter(Mission.id == mission_id).first()
+    result = await db.execute(
+        select(Mission).where(Mission.id == mission_id)
+    )
+    mission = result.scalar_one_or_none()
     if not mission:
         raise HTTPException(status_code=404, detail="Mission non trouvée")
+    
+    # Vérification des permissions
+    if mission.user_id != current_user.id and current_user.role != "PATRON":
+        raise HTTPException(status_code=403, detail="Accès non autorisé")
     
     return {
         "mission_id": mission.id,

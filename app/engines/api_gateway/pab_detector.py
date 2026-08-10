@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
+from enum import Enum
 from datetime import datetime, timedelta
 import logging
 import re
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/pab", tags=["PAB Detector"])
 
 
-class PABType(str):
+class PABType(str, Enum):
     """Types de PAB (Pénalités Administratives de Base)."""
     RETARD = "retard"
     NON_CONFORMITE = "non_conformite"
@@ -33,7 +34,7 @@ class PABType(str):
     ABSENCE_DOCUMENT = "absence_document"
 
 
-class PABSeverity(str):
+class PABSeverity(str, Enum):
     """Sévérité des PAB."""
     FAIBLE = "faible"
     MOYENNE = "moyenne"

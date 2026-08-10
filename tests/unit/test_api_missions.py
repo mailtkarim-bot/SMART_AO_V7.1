@@ -23,14 +23,14 @@ client = TestClient(app)
 
 
 class TestMissionsEndpoint:
-    def test_list_missions(self):
+    def test_list_missions(self, override_auth_dependency):
         response = client.get("/api/v1/missions")
         assert response.status_code == 200
         data = response.json()
         assert "missions" in data
         assert "total" in data
     
-    def test_create_mission(self):
+    def test_create_mission(self, override_auth_dependency):
         data = {
             "name": "Test Mission",
             "mission_type": "analysis",

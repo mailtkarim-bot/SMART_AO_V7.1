@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
+from enum import Enum
 from datetime import datetime, timedelta
 import logging
 from decimal import Decimal
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/post-gagne", tags=["Post-Gagné Tracker"])
 
 
-class PostGagneStatus(str):
+class PostGagneStatus(str, Enum):
     """Statuts des missions post-gagné."""
     EN_ATTENTE = "en_attente"
     DEMARRAGE = "demarrage"

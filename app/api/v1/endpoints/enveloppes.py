@@ -64,7 +64,7 @@ async def get_enveloppe_separator_dependency(mission_id: str) -> EnveloppeSepara
     return get_enveloppe_separator(mission_id)
 
 
-async def get_current_user_dependency(current_user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
+async def get_current_user_dependency(current_user: TokenData = Depends(get_current_user)) -> TokenData:
     """Dependency pour obtenir l'utilisateur courant."""
     return current_user
 
@@ -145,7 +145,7 @@ class EnveloppeStatus(BaseModel):
 async def separate_documents(
     mission_id: str,
     request: SeparationRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user),
 ):
     """
     Lancer la séparation des documents pour une mission.
@@ -161,8 +161,8 @@ async def separate_documents(
     
     **Retour** : Résumé de la séparation avec chemins des ZIP générés
     """
-    user_id = current_user.get("sub") or current_user.get("user_id") or "unknown"
-    user_role = current_user.get("role", "SALARIE")
+    user_id = current_user.user_id
+    user_role = current_user.role
     
     logger.info(f"Separation request: mission={mission_id}, user={user_id}, docs={len(request.document_ids)}")
     
@@ -246,7 +246,7 @@ async def separate_documents(
             summary="Statut de la séparation pour une mission")
 async def get_separation_status(
     mission_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user),
 ):
     """
     Récupérer le statut de la séparation pour une mission.
@@ -282,17 +282,17 @@ async def get_separation_status(
             description="Télécharger le fichier ZIP de l'enveloppe CANDIDATURE")
 async def download_candidature_enveloppe(
     mission_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user),
 ):
     """
     Télécharger l'enveloppe CANDIDATURE.
     
     **Permissions** : Accessible par salarié et admin (lecture seule)
     """
-    user_id = current_user.get("sub") or current_user.get("user_id") or "unknown"
+    user_id = current_user.user_id
     
     # Vérifier RBAC
-    if not EnveloppeRBAC.can_read_enveloppe(user_id, "CANDIDATURE", current_user):
+    if not EnveloppeRBAC.can_read_enveloppe(user_id, "CANDIDATURE", {"user_role": current_user.role.value}):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Accès refusé: vous n'avez pas la permission de lire cette enveloppe"
@@ -321,17 +321,17 @@ async def download_candidature_enveloppe(
             description="Télécharger le fichier ZIP de l'enveloppe TECHNIQUE")
 async def download_technique_enveloppe(
     mission_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user),
 ):
     """
     Télécharger l'enveloppe TECHNIQUE.
     
     **Permissions** : Accessible par salarié et admin (lecture seule)
     """
-    user_id = current_user.get("sub") or current_user.get("user_id") or "unknown"
+    user_id = current_user.user_id
     
     # Vérifier RBAC
-    if not EnveloppeRBAC.can_read_enveloppe(user_id, "TECHNIQUE", current_user):
+    if not EnveloppeRBAC.can_read_enveloppe(user_id, "TECHNIQUE", {"user_role": current_user.role.value}):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Accès refusé: vous n'avez pas la permission de lire cette enveloppe"
@@ -360,7 +360,7 @@ async def download_technique_enveloppe(
             description="Télécharger le fichier ZIP de l'enveloppe FINANCIERE (ADMIN ONLY)")
 async def download_financiere_enveloppe(
     mission_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user),
     _: dict = Depends(require_financial_access),
 ):
     """
@@ -373,11 +373,11 @@ async def download_financiere_enveloppe(
     
     **Permissions** : ADMIN ONLY
     """
-    user_id = current_user.get("sub") or current_user.get("user_id") or "unknown"
+    user_id = current_user.user_id
     
     # Vérifier RBAC - ADMIN ONLY
-    if not EnveloppeRBAC.can_read_enveloppe(user_id, "FINANCIERE", current_user):
-        user_role = current_user.get("role", "SALARIE")
+    if not EnveloppeRBAC.can_read_enveloppe(user_id, "FINANCIERE", {"user_role": current_user.role.value}):
+        user_role = current_user.role.value
         warning_msg = f"⚠️ ENVELOPPE FINANCIERE - ACCÈS RESTREINT: Votre rôle ({user_role}) ne peut pas accéder à cette enveloppe. Seul l'admin peut voir les données financières."
         
         logger.warning(f"ACCES REFUSE - FINANCIERE: user={user_id}, role={user_role}")
@@ -410,7 +410,7 @@ async def download_financiere_enveloppe(
             description="Récupérer la liste des fichiers manifest générés")
 async def list_enveloppe_manifests(
     mission_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user),
 ):
     """
     Lister les manifests des enveloppes pour une mission.
@@ -418,7 +418,7 @@ async def list_enveloppe_manifests(
     **Permissions** : Accessible par tous, mais les manifests FINANCIERE
     peuvent contenir des métadonnées sensibles
     """
-    user_id = current_user.get("sub") or current_user.get("user_id") or "unknown"
+    user_id = current_user.user_id
     
     separator = get_enveloppe_separator(mission_id)
     storage_path = separator.storage_path
@@ -451,7 +451,7 @@ async def list_enveloppe_manifests(
             summary="Informations détaillées sur les enveloppes")
 async def get_enveloppe_info(
     mission_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user),
 ):
     """
     Récupérer les informations détaillées sur toutes les enveloppes d'une mission.
@@ -459,7 +459,7 @@ async def get_enveloppe_info(
     **Permissions** : Accessible par tous, mais les infos FINANCIERE
     sont masquées pour les non-admins
     """
-    user_id = current_user.get("sub") or current_user.get("user_id") or "unknown"
+    user_id = current_user.user_id
     
     separator = get_enveloppe_separator(mission_id)
     
@@ -468,7 +468,7 @@ async def get_enveloppe_info(
         zip_path = await separator.get_enveloppe_path(enveloppe_type)
         
         # Vérifier RBAC pour chaque enveloppe
-        can_access = EnveloppeRBAC.can_read_enveloppe(user_id, enveloppe_type.value, current_user)
+        can_access = EnveloppeRBAC.can_read_enveloppe(user_id, enveloppe_type.value, {"user_role": current_user.role.value})
         
         info = EnveloppeInfo(
             mission_id=mission_id,

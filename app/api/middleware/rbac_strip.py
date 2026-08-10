@@ -27,7 +27,7 @@ from starlette.responses import Response
 
 from app.core.auth import decode_token
 from app.models.user import Role
-from app.engines.security_engine.rbac_fields import FIELDS_STRIP
+from app.engines.security_engine.rbac_fields import FIELDS_STRIP, normalize_field_name
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +35,15 @@ logger = logging.getLogger(__name__)
 def _strip_financial_data(data: Any) -> Any:
     """
     Supprime récursivement les champs sensibles d'une structure de données.
+    Utilise la normalisation des noms de champs pour éviter le contournement
+    par nommage alternatif (camelCase, kebab-case, etc.).
     """
     if isinstance(data, dict):
         filtered = {}
         for key, value in data.items():
-            if key.lower() in FIELDS_STRIP:
+            # Normaliser le nom du champ pour comparaison
+            normalized_key = normalize_field_name(key)
+            if normalized_key in FIELDS_STRIP:
                 continue
             filtered[key] = _strip_financial_data(value)
         return filtered

@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 import logging
 
-from app.db.session import get_db
-from app.api.dependencies.auth import get_current_user, require_patron_access
+from app.core.database import get_db
+from app.core.auth import get_current_user, require_admin_access
 from app.models.user import User
 from app.models.mission import Mission
 from app.schemas.mission import MissionCreate, MissionResponse
@@ -23,7 +23,7 @@ async def analyze_dce(
     background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(...),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_patron_access)
+    current_user: User = Depends(require_admin_access)
 ):
     """
     Analyse complète d'un DCE (Dossier de Consultation des Entreprises).
@@ -43,7 +43,7 @@ async def analyze_dce(
         # Création de la mission
         mission_data = MissionCreate(
             name=files[0].filename if files else "DCE Import",
-            user_id=current_user.id,
+            user_id=current_user.user_id,
             status="processing"
         )
         mission = Mission(**mission_data.dict())

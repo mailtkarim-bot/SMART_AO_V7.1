@@ -45,22 +45,22 @@ class TestE2EWorkflow:
         data = response.json()
         assert data["status"] == "healthy"
     
-    def test_e2e_missions_list(self):
+    def test_e2e_missions_list(self, override_auth_dependency):
         """Test end-to-end: liste des missions."""
         response = client.get("/api/v1/missions")
         assert response.status_code == 200
     
-    def test_e2e_agents_list(self):
+    def test_e2e_agents_list(self, override_auth_dependency):
         """Test end-to-end: liste des agents."""
         response = client.get("/api/v1/agents")
         assert response.status_code == 200
     
-    def test_e2e_documents_endpoint(self):
+    def test_e2e_documents_endpoint(self, override_auth_dependency):
         """Test end-to-end: endpoint documents."""
         response = client.get("/api/v1/documents")
         assert response.status_code in [200, 404]
     
-    def test_e2e_workflows_endpoint(self):
+    def test_e2e_workflows_endpoint(self, override_auth_dependency):
         """Test end-to-end: endpoint workflows."""
         response = client.get("/api/v1/workflows")
         assert response.status_code in [200, 404]
@@ -95,7 +95,7 @@ class TestE2EWorkflow:
         response = client.get("/api/v1/nonexistent")
         assert response.status_code == 404
     
-    def test_e2e_system_ready(self):
+    def test_e2e_system_ready(self, override_auth_dependency):
         """Test end-to-end: système prêt pour production."""
         # Vérifier que le système répond correctement
         health_response = client.get("/api/v1/health")

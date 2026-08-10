@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 import logging
 
 from app.core.database import get_db
-from app.core.auth import get_current_user, TokenData, AuthService, hash_password
+from app.core.auth import get_current_user, TokenData, verify_password, get_password_hash
 from app.models.user import User, Role
 
 logger = logging.getLogger(__name__)
@@ -124,7 +124,7 @@ async def create_user(
         )
     
     # Hash du mot de passe
-    hashed_password = hash_password(user_data.password)
+    hashed_password = get_password_hash(user_data.password)
     
     # Créer le nouvel utilisateur
     new_user = User(
@@ -458,15 +458,14 @@ async def change_password(
     
     # Vérifier l'ancien mot de passe (sauf pour les admins qui changent le mot de passe d'autres utilisateurs)
     if current_user.user_id == user_id:
-        auth_service = AuthService()
-        if not auth_service.verify_password(password_data.current_password, user.hashed_password):
+        if not verify_password(password_data.current_password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Ancien mot de passe incorrect"
             )
     
     # Hash du nouveau mot de passe
-    user.hashed_password = hash_password(password_data.new_password)
+    user.hashed_password = get_password_hash(password_data.new_password)
     
     await db.commit()
 
@@ -503,7 +502,7 @@ async def reset_password(
     
     # Générer un mot de passe temporaire (en production, envoyer un email)
     temp_password = "TempPass123!@#"
-    user.hashed_password = hash_password(temp_password)
+    user.hashed_password = get_password_hash(temp_password)
     
     await db.commit()
 

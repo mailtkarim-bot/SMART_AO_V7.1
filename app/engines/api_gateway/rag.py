@@ -47,7 +47,7 @@ async def index_document(
     file: UploadFile = File(..., description="Document file to index"),
     document_type: Optional[str] = Form(None, description="Type of document (DCE, CCAP, DPGF, etc.)"),
     metadata: Optional[str] = Form(None, description="JSON metadata"),
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user),
     _: TokenData = Depends(require_financial_access),
 ):
     """
@@ -69,7 +69,7 @@ async def index_document(
     Returns:
         Dict: Résultats de l'indexation
     """
-    user_id = current_user.get("user_id", "unknown")
+    user_id = current_user.user_id or "unknown"
     
     try:
         # Lire le contenu du fichier
@@ -171,7 +171,7 @@ async def index_document(
 @router.post("/index-batch", summary="Index Multiple Documents", response_model=Dict[str, Any])
 async def index_documents_batch(
     documents: List[Dict[str, Any]],
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user),
     _: TokenData = Depends(require_financial_access),
 ):
     """
@@ -184,7 +184,7 @@ async def index_documents_batch(
     Returns:
         Dict: Résumé de l'indexation batch
     """
-    user_id = current_user.get("user_id", "unknown")
+    user_id = current_user.user_id or "unknown"
     
     rag_engine = await get_rag_engine()
     

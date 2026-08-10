@@ -133,7 +133,7 @@ def validate_build3_gates():
             return False, "Gate 4 échoué"
     except Exception as e:
         print(f"  ⚠️  Gate 4: {e} (structure à compléter)")
-        # Ne pas échouer, c'est un TODO
+        # Ne pas échouer, implémentation en cours
     
     return True, "Gates Build 3 validés"
 

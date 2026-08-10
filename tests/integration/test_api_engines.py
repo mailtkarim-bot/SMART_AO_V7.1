@@ -46,7 +46,7 @@ class TestAPIEnginesIntegration:
         assert "status" in data
         assert data["status"] == "healthy"
     
-    def test_missions_endpoint_uses_workflow_engine(self):
+    def test_missions_endpoint_uses_workflow_engine(self, override_auth_dependency):
         """Test que l'endpoint missions utilise le workflow engine."""
         response = client.get("/api/v1/missions")
         assert response.status_code == 200
@@ -54,7 +54,7 @@ class TestAPIEnginesIntegration:
         assert "missions" in data
         assert "total" in data
     
-    def test_agents_endpoint_uses_registry(self):
+    def test_agents_endpoint_uses_registry(self, override_auth_dependency):
         """Test que l'endpoint agents utilise le registry."""
         response = client.get("/api/v1/agents")
         assert response.status_code == 200
@@ -62,14 +62,14 @@ class TestAPIEnginesIntegration:
         assert "agents" in data
         assert "total" in data
     
-    def test_workflows_endpoint_uses_workflow_engine(self):
+    def test_workflows_endpoint_uses_workflow_engine(self, override_auth_dependency):
         """Test que l'endpoint workflows utilise le workflow engine."""
         response = client.get("/api/v1/workflows")
         # L'endpoint peut retourner 200 ou 404 selon l'implémentation
         # On vérifie juste qu'il ne plante pas et retourne une réponse valide
         assert response.status_code in [200, 404]
     
-    def test_documents_endpoint_integrated(self):
+    def test_documents_endpoint_integrated(self, override_auth_dependency):
         """Test que l'endpoint documents est intégré avec les engines."""
         response = client.get("/api/v1/documents")
         assert response.status_code in [200, 404]

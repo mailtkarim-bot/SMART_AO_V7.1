@@ -36,7 +36,10 @@ logger = logging.getLogger(__name__)
 
 
 class BootstrapV7:
-    """Classe principale pour le bootstrap de SMART_AO V7."""
+    """
+    Classe principale pour le bootstrap de SMART_AO V7.
+    Implémenté selon ARCHITECTURE_V7_ENGINE.md et ENGINEERING-HANDBOOK_V7.md
+    """
     
     VERSION = "7.1.0"
     PROJECT_NAME = "SMART_AO_V7"

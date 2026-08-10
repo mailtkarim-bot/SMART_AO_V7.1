@@ -20,6 +20,56 @@ non autorisés à accéder aux données financières / stratégiques.
 """
 
 from typing import FrozenSet
+import re
+
+
+def normalize_field_name(field_name: str) -> str:
+    """
+    Normalise un nom de champ pour comparaison avec FIELDS_STRIP.
+    
+    Cette fonction convertit les variantes de nommage en un format standard
+    pour éviter le contournement du RBAC par nommage alternatif.
+    
+    Exemples:
+        - "priceUnitaire" -> "price_unitaire"
+        - "prix-unitaire" -> "prix_unitaire"
+        - "Prix Unitaire" -> "prix_unitaire"
+        - "montantHT" -> "montant_ht"
+        - "getHTTPResponseCode" -> "get_http_response_code"
+        - "HTTPResponseCode" -> "http_response_code"
+    
+    Args:
+        field_name: Nom du champ à normaliser
+        
+    Returns:
+        str: Nom normalisé en snake_case lowercase
+    """
+    # Traiter le nom original pour insérer des underscores avant les majuscules
+    # (sauf au début du mot)
+    original = field_name
+    
+    # Insérer underscore avant chaque majuscule qui suit une minuscule ou un chiffre
+    # Exemple: "montantHT" -> "montant_HT"
+    s1 = re.sub('([a-z0-9])([A-Z])', r'\1_\2', original)
+    
+    # Insérer underscore avant chaque majuscule suivie de minuscules
+    # Exemple: "getHTTP" -> "get_HTTP"
+    s2 = re.sub('([A-Z]+)([A-Z][a-z])', r'\1_\2', s1)
+    
+    # Convertir en lowercase
+    normalized = s2.lower()
+    
+    # Remplacer les variantes de séparateurs par des underscores
+    normalized = re.sub(r'[\s\-\.]', '_', normalized)
+    
+    # Supprimer les doubles underscores
+    normalized = re.sub(r'_+', '_', normalized)
+    
+    # Supprimer les underscores en début et fin
+    normalized = normalized.strip('_')
+    
+    return normalized
+
 
 # Champs financiers et stratégiques réservés au PATRON / rôles autorisés.
 # Catalogue canonical V7.1 — inclut les champs historiques V6 + les nouveaux

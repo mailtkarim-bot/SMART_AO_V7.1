@@ -23,14 +23,14 @@ client = TestClient(app)
 
 
 class TestAgentsEndpoint:
-    def test_list_agents(self):
+    def test_list_agents(self, override_auth_dependency):
         response = client.get("/api/v1/agents")
         assert response.status_code == 200
         data = response.json()
         assert "agents" in data
         assert "total" in data
     
-    def test_get_agent(self):
+    def test_get_agent(self, override_auth_dependency):
         response = client.get("/api/v1/agents/DeadlineAgent")
         # Peut échouer si l'agent n'existe pas, mais vérifie que l'endpoint fonctionne
         assert response.status_code in [200, 404]

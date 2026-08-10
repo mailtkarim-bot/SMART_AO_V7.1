@@ -4,7 +4,7 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://img.shields.io/badge/build-9-brightgreen.svg)](https://github.com/)
-[![Coverage: 90.24%](https://img.shields.io/badge/coverage-90.24%-green.svg)](https://)
+[![Coverage: 43.65%](https://img.shields.io/badge/coverage-43.65%-green.svg)](https://)
 
 ---
 
@@ -523,7 +523,7 @@ bash scripts/validate_all_gates.sh
 
 ### **Couverture de Code**
 
-- **Couverture Globale :** 90.24%
+- **Couverture Globale :** 43.65%
 - **Modules Core :** 100% (config, security, events, etc.)
 - **Objectif :** >90% ✅
 

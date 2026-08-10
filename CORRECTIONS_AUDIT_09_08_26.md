@@ -179,7 +179,7 @@ Toutes les corrections **P0 (bloquantes production)** ont été implémentées, 
 3. **P1-2** : Remplacer tous les float par Decimal dans Math Engine
 
 ### Sprint 2 - Tests & Qualité
-1. **P1-8** : Corriger le badge coverage (90.24% trompeur)
+1. **P1-8** : Corriger le badge coverage (43.65% trompeur)
 2. **P1-7 Compléter** : Créer des tests RBAC supplémentaires sans override
 
 ### Sprint 3 - Ops

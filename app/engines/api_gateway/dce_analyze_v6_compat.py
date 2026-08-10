@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any, Union
 from pydantic import BaseModel, Field
+from enum import Enum
 from datetime import datetime
 import logging
 import re
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/dce/v6", tags=["DCE V6 Compatibility"])
 
 
-class V6Format(str):
+class V6Format(str, Enum):
     """Formats V6 supportés."""
     STANDARD = "standard"
     SIMPLIFIE = "simplifie"
@@ -33,7 +34,7 @@ class V6Format(str):
     MINIMAL = "minimal"
 
 
-class V6Section(str):
+class V6Section(str, Enum):
     """Sections DCE V6."""
     DESCRIPTION = "description"
     CCTP = "cctp"

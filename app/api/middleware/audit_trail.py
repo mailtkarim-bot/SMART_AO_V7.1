@@ -61,8 +61,9 @@ class AuditTrailMiddleware(BaseHTTPMiddleware):
             # Extraire les infos utilisateur du state si disponible
             if hasattr(request.state, "current_user"):
                 user_data = request.state.current_user
-                user_id = user_data.get("user_id", user_data.get("sub", "unknown"))
-                user_role = user_data.get("role", "unknown")
+                # TokenData est un objet Pydantic, pas un dict
+                user_id = getattr(user_data, "user_id", getattr(user_data, "sub", "unknown"))
+                user_role = getattr(user_data, "role", "unknown")
             
             # Calculer le temps de traitement
             processing_time = (datetime.now() - start_time).total_seconds() * 1000

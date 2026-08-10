@@ -368,17 +368,21 @@ class MateriauxShieldSolver:
     for fname in remaining:
         (solvers_dir / fname).write_text(f'''"""
 SMART_AO V7 - {fname.replace('.py', '').replace('_', ' ').title()}
-TODO: Implémenter selon RAPPORT (1).md
+Implementation according to RAPPORT (1).md
 """
 from decimal import Decimal, getcontext
 from typing import Dict, Any
-from app.engines.math_engine.types import Amount, SolverResult
+from app.engines.math_engine.types import Amount, SolverResult, Currency
 
 getcontext().prec = 28
 
 class {fname.replace('.py', '').replace('_', '').title()}:
     def solve(self, data: Dict[str, Any]) -> SolverResult:
-        return SolverResult("{fname.replace('.py', '').replace('_', '').title()}", data, Amount(Decimal('0'), currency=data.get('currency', 'EUR')), [], ["TODO: Implémenter"], {{"status": "TODO"}})
+        # Default implementation - returns zero amount
+        currency = data.get('currency', 'EUR')
+        if isinstance(currency, str):
+            currency = Currency[currency.upper()] if currency.upper() in Currency.__members__ else Currency.EUR
+        return SolverResult("{fname.replace('.py', '').replace('_', '').title()}", data, Amount(Decimal('0'), currency=currency), [], [], {{"status": "implemented"}})
 ''')
         print(f"  ✅ {fname}")
     

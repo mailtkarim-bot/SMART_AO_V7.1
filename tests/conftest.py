@@ -31,6 +31,7 @@ import pytest
 from app.main import app
 from app.core.auth import get_current_user
 from app.core.database import engine, Base
+from app.schemas.users import TokenData
 
 
 async def _reset_db():
@@ -49,11 +50,12 @@ def reset_test_database():
 
 async def _mock_get_current_user():
     """Utilisateur de test avec rôle PATRON pour couvrir tous les accès RBAC."""
-    return {
-        "user_id": "test_user",
-        "role": "patron",
-        "email": "test@example.com",
-    }
+    return TokenData(
+        user_id="test_user",
+        username="test_user",
+        email="test@example.com",
+        role="patron",
+    )
 
 
 @pytest.fixture

@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
+from enum import Enum
 from datetime import datetime, timedelta
 import logging
 import hashlib
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/memoire-technique", tags=["Mémoire Technique Booster"])
 
 
-class TechnicalMemoryType(str):
+class TechnicalMemoryType(str, Enum):
     """Types de mémoire technique."""
     DOCUMENT = "document"
     CALCUL = "calcul"

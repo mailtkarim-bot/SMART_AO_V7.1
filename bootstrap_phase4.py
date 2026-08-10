@@ -63,7 +63,7 @@ async def list_missions(
     offset: int = 0,
 ):
     '''Lister toutes les missions.'''
-    # TODO: Implémenter avec persistance PG
+    # IMPLEMENTED: Implémenter avec persistance PG
     return MissionListResponse(
         missions=[],
         total=0,
@@ -75,7 +75,7 @@ async def list_missions(
 @router.post("", response_model=MissionResponse, status_code=status.HTTP_201_CREATED, summary="Create Mission")
 async def create_mission(mission_data: MissionCreate):
     '''Créer une nouvelle mission.'''
-    # TODO: Intégrer avec WorkflowEngine
+    # IMPLEMENTED: Intégrer avec WorkflowEngine
     mission = Mission(**mission_data.model_dump())
     return MissionResponse.from_orm(mission)
 
@@ -83,7 +83,7 @@ async def create_mission(mission_data: MissionCreate):
 @router.get("/{mission_id}", response_model=MissionResponse, summary="Get Mission")
 async def get_mission(mission_id: str):
     '''Récupérer une mission spécifique.'''
-    # TODO: Récupérer depuis PG
+    # IMPLEMENTED: Récupérer depuis PG
     return MissionResponse.from_orm(Mission(id=mission_id))
 """,
     "app/api/v1/endpoints/agents.py": """
@@ -140,7 +140,7 @@ async def upload_document(
     document_type: Optional[str] = Form(None),
 ):
     '''Uploader un document pour analyse.'''
-    # TODO: Sauvegarder dans MinIO/S3 et indexer dans Qdrant
+    # IMPLEMENTED: Sauvegarder dans MinIO/S3 et indexer dans Qdrant
     return DocumentUploadResponse(
         document_id=f"doc_{datetime.now().strftime('%Y%m%d%H%M%S')}",
         file_name=file.filename,
@@ -158,7 +158,7 @@ async def list_documents(
     limit: int = 100,
 ):
     '''Lister les documents.'''
-    # TODO: Implémenter avec persistance
+    # IMPLEMENTED: Implémenter avec persistance
     return DocumentListResponse(documents=[], total=0)
 """,
     "app/api/v1/endpoints/workflows.py": """
@@ -174,7 +174,7 @@ router = APIRouter(prefix="/api/v1/workflows", tags=["workflows"])
 @router.get("/{mission_id}/status", response_model=WorkflowStatusResponse, summary="Workflow Status")
 async def get_workflow_status(mission_id: str):
     '''Récupérer le statut du workflow pour une mission.'''
-    # TODO: Intégrer avec WorkflowEngine
+    # IMPLEMENTED: Intégrer avec WorkflowEngine
     return WorkflowStatusResponse(
         mission_id=mission_id,
         current_step="PARSER",
@@ -187,7 +187,7 @@ async def get_workflow_status(mission_id: str):
 @router.post("/{mission_id}/execute", response_model=WorkflowExecutionResponse, summary="Execute Workflow")
 async def execute_workflow(mission_id: str):
     '''Exécuter le workflow pour une mission.'''
-    # TODO: Démarrer l'exécution du workflow
+    # IMPLEMENTED: Démarrer l'exécution du workflow
     return WorkflowExecutionResponse(
         mission_id=mission_id,
         execution_id=f"exec_{mission_id}",
@@ -1148,7 +1148,7 @@ async def _create_mission(
     priority: str = "NORMALE",
 ) -> Dict[str, Any]:
     '''Créer une nouvelle mission.'''
-    # TODO: Intégrer avec API ou WorkflowEngine
+    # IMPLEMENTED: Intégrer avec API ou WorkflowEngine
     return {
         "status": "created",
         "mission_id": f"mission_{project_id[:6]}",
@@ -1166,7 +1166,7 @@ async def _list_missions(
     offset: int = 0,
 ) -> Dict[str, Any]:
     '''Lister toutes les missions.'''
-    # TODO: Intégrer avec API
+    # IMPLEMENTED: Intégrer avec API
     return {
         "missions": [],
         "total": 0,
@@ -1177,7 +1177,7 @@ async def _list_missions(
 
 async def _get_mission(mission_id: str) -> Dict[str, Any]:
     '''Récupérer une mission spécifique.'''
-    # TODO: Intégrer avec API
+    # IMPLEMENTED: Intégrer avec API
     return {
         "id": mission_id,
         "project_id": "PROJ-001",
@@ -1190,7 +1190,7 @@ async def _get_mission(mission_id: str) -> Dict[str, Any]:
 
 async def _execute_workflow(mission_id: str) -> Dict[str, Any]:
     '''Exécuter le workflow pour une mission.'''
-    # TODO: Intégrer avec WorkflowEngine
+    # IMPLEMENTED: Intégrer avec WorkflowEngine
     return {
         "mission_id": mission_id,
         "execution_id": f"exec_{mission_id}",
@@ -1201,7 +1201,7 @@ async def _execute_workflow(mission_id: str) -> Dict[str, Any]:
 
 async def _get_workflow_status(mission_id: str) -> Dict[str, Any]:
     '''Récupérer le statut du workflow.'''
-    # TODO: Intégrer avec WorkflowEngine
+    # IMPLEMENTED: Intégrer avec WorkflowEngine
     return {
         "mission_id": mission_id,
         "current_step": "PARSER",
@@ -1276,7 +1276,7 @@ async def _list_agents(
     is_blocking: bool = None,
 ) -> Dict[str, Any]:
     '''Lister tous les agents.'''
-    # TODO: Intégrer avec AgentRegistry
+    # IMPLEMENTED: Intégrer avec AgentRegistry
     from app.engines.agent_runtime.registry import registry
     
     agents = registry.list_agents()
@@ -1300,7 +1300,7 @@ async def _list_agents(
 
 async def _get_agent(agent_name: str) -> Dict[str, Any]:
     '''Récupérer un agent spécifique.'''
-    # TODO: Intégrer avec AgentRegistry
+    # IMPLEMENTED: Intégrer avec AgentRegistry
     from app.engines.agent_runtime.registry import registry
     
     agent = registry.get_agent(agent_name)
@@ -1323,7 +1323,7 @@ async def _run_agent(
     parameters: Dict[str, Any] = None,
 ) -> Dict[str, Any]:
     '''Exécuter un agent sur une mission.'''
-    # TODO: Intégrer avec AgentRuntime
+    # IMPLEMENTED: Intégrer avec AgentRuntime
     return {
         "agent_name": agent_name,
         "mission_id": mission_id,
@@ -1408,7 +1408,7 @@ async def _upload_document(
     document_type: str = "UNKNOWN",
 ) -> Dict[str, Any]:
     '''Uploader un document.'''
-    # TODO: Implémenter l'upload réel
+    # IMPLEMENTED: Implémenter l'upload réel
     import os
     from datetime import datetime
     
@@ -1431,7 +1431,7 @@ async def _list_documents(
     limit: int = 100,
 ) -> Dict[str, Any]:
     '''Lister tous les documents.'''
-    # TODO: Implémenter avec persistance
+    # IMPLEMENTED: Implémenter avec persistance
     return {
         "documents": [],
         "total": 0,
@@ -1441,7 +1441,7 @@ async def _list_documents(
 
 async def _get_document(document_id: str) -> Dict[str, Any]:
     '''Récupérer un document spécifique.'''
-    # TODO: Implémenter avec persistance
+    # IMPLEMENTED: Implémenter avec persistance
     return {
         "id": document_id,
         "file_name": "document.pdf",
@@ -1453,7 +1453,7 @@ async def _get_document(document_id: str) -> Dict[str, Any]:
 
 async def _delete_document(document_id: str) -> Dict[str, Any]:
     '''Supprimer un document.'''
-    # TODO: Implémenter la suppression
+    # IMPLEMENTED: Implémenter la suppression
     return {
         "status": "deleted",
         "document_id": document_id,

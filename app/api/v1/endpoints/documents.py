@@ -66,7 +66,7 @@ async def upload_document(
     file: UploadFile = File(...),
     mission_id: Optional[str] = Form(None),
     document_type: Optional[str] = Form(None),
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user),
 ):
     '''Uploader un document pour analyse avec validation de sécurité complète.'''
     
@@ -155,7 +155,7 @@ async def upload_document(
         upload_tracker[upload_id]["status"] = "PROCESSING"
         
         # Stockage sécurisé : UUID + dossier unique documents
-        user_id = current_user.get("user_id", "unknown")
+        user_id = current_user.user_id or "unknown"
         safe_name = _sanitize_filename(file.filename)
         file_uuid = uuid.uuid4().hex
         storage_name = f"{file_uuid}{ext}"

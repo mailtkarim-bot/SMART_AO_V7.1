@@ -144,6 +144,58 @@ class AuditLog(Base):
     )
 
 
+class CalculationAuditLog(Base):
+    """
+    Modèle SQLAlchemy pour l'audit des calculs financiers.
+    Implémente la traçabilité formelle pour preuve juridique (tribunal, expert-comptable).
+    Chaque calcul financier est hashé pour garantir son intégrité.
+    """
+    __tablename__ = "calculation_audit_logs"
+    
+    # Champ ID (auto-généré)
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Identifiant unique du calcul
+    calculation_id = Column(String(64), unique=True, index=True, nullable=False)
+    
+    # Timestamp
+    timestamp = Column(DateTime(timezone=True), index=True, nullable=False)
+    
+    # Utilisateur
+    user_id = Column(String(64), index=True)
+    username = Column(String(128))
+    role = Column(String(64))
+    
+    # Mission associée
+    mission_id = Column(String(128), index=True)
+    
+    # Type de calcul
+    calculation_type = Column(String(64), index=True, nullable=False)  # "marge", "penalite_ccag", "tresorerie", etc.
+    
+    # Hash des entrées et sorties pour intégrité
+    input_hash = Column(String(64), nullable=False)  # SHA-256 des entrées
+    output_hash = Column(String(64), nullable=False)  # SHA-256 des sorties
+    
+    # Résultat du calcul (JSON)
+    input_data = Column(JSON)  # Données d'entrée du calcul
+    output_data = Column(JSON)  # Résultat du calcul
+    
+    # Métadonnées
+    solver_version = Column(String(32))  # Version du solveur utilisé
+    duration_ms = Column(Integer)  # Durée du calcul en millisecondes
+    
+    # Intégrité WORM
+    hash = Column(String(64))  # Hash SHA-256 de l'ensemble de l'enregistrement
+    is_modified = Column(Boolean, default=False, nullable=False)  # WORM: ne doit jamais être True
+    
+    # Index pour les recherches rapides
+    __table_args__ = (
+        Index('idx_calculation_type', 'calculation_type'),
+        Index('idx_calculation_mission', 'mission_id'),
+        Index('idx_calculation_timestamp', 'timestamp'),
+    )
+
+
 # =============================================================================
 # STRUCTURES DE DONNÉES
 # =============================================================================
@@ -237,6 +289,7 @@ class AuditService:
     
     def __init__(self):
         self.events: List[AuditEvent] = []
+        self.calculation_events: List[Dict[str, Any]] = []
         self.lock = threading.Lock()
         self._initialized = False
     
@@ -656,6 +709,101 @@ def audit_action(action: AuditAction, resource_type: str = None):
         
         return wrapper
     return decorator
+
+
+# =============================================================================
+# FONCTIONS UTILITAIRES POUR L'AUDIT DES CALCULS
+# =============================================================================
+
+async def log_calculation_audit(
+    calculation_type: str,
+    input_data: Dict[str, Any],
+    output_data: Dict[str, Any],
+    user: Optional[Dict[str, Any]] = None,
+    mission_id: Optional[str] = None,
+    db: Optional[AsyncSession] = None,
+    solver_version: str = "1.0",
+    duration_ms: Optional[int] = None
+) -> str:
+    """
+    Journaliser un calcul financier pour traçabilité juridique.
+    
+    Args:
+        calculation_type: Type de calcul (ex: "marge", "penalite_ccag")
+        input_data: Données d'entrée du calcul
+        output_data: Résultat du calcul
+        user: Informations utilisateur (user_id, username, role)
+        mission_id: ID de la mission associée
+        db: Session de base de données
+        solver_version: Version du solveur
+        duration_ms: Durée du calcul en ms
+    
+    Returns:
+        str: calculation_id généré
+    """
+    import hashlib
+    import json
+    import uuid
+    
+    service = get_audit_service()
+    
+    # Calculer les hash SHA-256
+    input_hash = hashlib.sha256(json.dumps(input_data, sort_keys=True, default=str).encode()).hexdigest()
+    output_hash = hashlib.sha256(json.dumps(output_data, sort_keys=True, default=str).encode()).hexdigest()
+    
+    # Créer l'enregistrement d'audit
+    calculation_id = str(uuid.uuid4())
+    timestamp = datetime.now(timezone.utc)
+    
+    # En mode mémoire (pour les tests)
+    with service.lock:
+        service.calculation_events.append({
+            "calculation_id": calculation_id,
+            "calculation_type": calculation_type,
+            "input_hash": input_hash,
+            "output_hash": output_hash,
+            "input_data": input_data,
+            "output_data": output_data,
+            "user_id": user.get("user_id") if user else None,
+            "username": user.get("username") if user else None,
+            "role": user.get("role") if user else None,
+            "mission_id": mission_id,
+            "solver_version": solver_version,
+            "duration_ms": duration_ms,
+            "timestamp": timestamp
+        })
+    
+    # En mode base de données
+    if db is not None:
+        try:
+            calc_audit = CalculationAuditLog(
+                calculation_id=calculation_id,
+                timestamp=timestamp,
+                user_id=user.get("user_id") if user else None,
+                username=user.get("username") if user else None,
+                role=user.get("role") if user else None,
+                mission_id=mission_id,
+                calculation_type=calculation_type,
+                input_hash=input_hash,
+                output_hash=output_hash,
+                input_data=input_data,
+                output_data=output_data,
+                solver_version=solver_version,
+                duration_ms=duration_ms,
+                hash=hashlib.sha256(f"{calculation_id}{timestamp}{input_hash}{output_hash}".encode()).hexdigest(),
+                is_modified=False
+            )
+            
+            db.add(calc_audit)
+            await db.commit()
+            
+            logger.debug(f"Audit calcul journalisé: {calculation_type} - {calculation_id}")
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la journalisation du calcul: {e}")
+            await db.rollback()
+    
+    return calculation_id
 
 
 if __name__ == "__main__":

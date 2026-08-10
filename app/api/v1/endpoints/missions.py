@@ -33,13 +33,13 @@ async def list_missions(
     page: int = 1,
     per_page: int = 100,
     db: AsyncSession = Depends(get_db),
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user),
 ):
     '''Lister toutes les missions avec pagination.'''
     
     # Récupérer le rôle de l'utilisateur et appliquer le filtrage RBAC
     enforcer = get_rbac_enforcer()
-    user_role = Role(current_user.get("role", "conducteur_travaux"))
+    user_role = Role(current_user.role)
     
     # Construction de la requête (single-tenant pur : pas de filtre tenant)
     query = select(MissionModel)
@@ -137,10 +137,10 @@ async def list_missions(
 async def create_mission(
     mission_data: MissionCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user),
 ):
     '''Créer une nouvelle mission avec persistance PostgreSQL.'''
-    user_id = current_user.get("user_id", "unknown")
+    user_id = current_user.user_id
     
     # Convertir priority int vers string
     priority_map = {1: "BASSE", 2: "NORMALE", 3: "HAUTE", 4: "URGENTE", 5: "URGENTE"}
@@ -196,13 +196,13 @@ async def create_mission(
 async def get_mission(
     mission_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user),
 ):
     '''Récupérer une mission spécifique.'''
     
     # Récupérer le rôle de l'utilisateur pour le filtrage RBAC
     enforcer = get_rbac_enforcer()
-    user_role = Role(current_user.get("role", "conducteur_travaux"))
+    user_role = Role(current_user.role)
     
     # Récupérer depuis PostgreSQL (single-tenant pur : pas de filtre tenant)
     result = await db.execute(

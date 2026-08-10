@@ -3,11 +3,12 @@ Variants Endpoint - Gestion des variantes techniques et financières
 Permet de simuler différents scénarios de réponse à l'AO
 """
 from fastapi import APIRouter, HTTPException, Depends, Body
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
-from app.db.session import get_db
-from app.security.rbac import require_auth, require_financial_access
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.database import get_db
+from app.core.auth import get_current_user, require_financial_access
+from app.models.user import User
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ class VariantCreate(BaseModel):
     name: str
     description: str
     type: str  # "technique", "financiere", "mixte"
-    modifications: Dict[str, any]
+    modifications: Dict[str, Any]
     base_scenario_id: int
 
 class VariantResponse(BaseModel):
@@ -31,13 +32,13 @@ class VariantResponse(BaseModel):
 @router.post("/", response_model=VariantResponse)
 async def create_variant(
     variant: VariantCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(require_auth)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Créer une variante de scénario"""
     # Vérification accès financier si variante financière
     if variant.type in ["financiere", "mixte"]:
-        # require_financial_access déjà appliqué au niveau route si nécessaire
+        # require_financial_access peut être appliqué au niveau route si nécessaire
         pass
     
     # Simulation de création
@@ -55,11 +56,31 @@ async def create_variant(
 @router.get("/{mission_id}/list")
 async def list_variants(
     mission_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(require_auth)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Lister toutes les variantes d'une mission"""
-    # TODO: Requête DB
+    # Requête DB - simulation avec données en mémoire
+    import json
+    from pathlib import Path
+    variants_db = Path("data/variants.json")
+    
+    if variants_db.exists():
+        try:
+            with open(variants_db, 'r') as f:
+                variants_data = json.load(f)
+            
+            mission_variants = [
+                v for v in variants_data.get("variants", [])
+                if v.get("mission_id") == mission_id
+            ]
+            
+            if mission_variants:
+                return {"mission_id": mission_id, "variants": mission_variants}
+        except:
+            pass
+    
+    # Retourner des données par défaut
     return {
         "mission_id": mission_id,
         "variants": [
@@ -72,8 +93,8 @@ async def list_variants(
 @router.post("/{variant_id}/simulate")
 async def simulate_variant(
     variant_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(require_auth)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Simuler l'impact d'une variante sur le score global"""
     # Appel au Math Engine pour recalculation
@@ -93,8 +114,8 @@ async def simulate_variant(
 @router.delete("/{variant_id}")
 async def delete_variant(
     variant_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(require_auth)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Supprimer une variante"""
     return {"status": "deleted", "variant_id": variant_id}

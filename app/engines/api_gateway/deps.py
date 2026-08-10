@@ -23,6 +23,7 @@ from typing import Optional, Dict, Any
 import logging
 
 from app.models.user import Role, User, RBAC_RULES, FINANCIAL_DATA, TECHNICAL_DATA, LEGAL_DATA
+from app.schemas.users import TokenData
 from app.core.database import async_get_db
 from app.core.auth import RBACService, SecurityService
 from app.core.config import settings
@@ -46,7 +47,7 @@ class SecurityDependencies:
         self.rbac_service = RBACService()
         self.security_service = SecurityService()
     
-    async def get_current_user(self, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())) -> Dict[str, Any]:
+    async def get_current_user(self, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())) -> TokenData:
         """
         Récupérer l'utilisateur courant à partir du token JWT.
         """
@@ -66,6 +67,8 @@ class SecurityDependencies:
             
             user_id = payload.get("sub")
             role = payload.get("role", "sous_traitant")
+            username = payload.get("username", "")
+            email = payload.get("email", "")
             
             if user_id is None:
                 raise HTTPException(
@@ -74,10 +77,12 @@ class SecurityDependencies:
                     headers={"WWW-Authenticate": "Bearer"}
                 )
             
-            return {
-                "user_id": user_id,
-                "role": role
-            }
+            return TokenData(
+                user_id=user_id,
+                username=username,
+                email=email,
+                role=role
+            )
         except JWTError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -112,11 +117,11 @@ class SecurityDependencies:
         except JWTError:
             raise HTTPException(status_code=401, detail="Invalid token")
     
-    async def verify_financial_access(self, current_user: Dict[str, Any]) -> bool:
+    async def verify_financial_access(self, current_user: TokenData) -> bool:
         """
         Vérifier que l'utilisateur a accès aux données financières.
         """
-        role = current_user.get("role", "sous_traitant")
+        role = current_user.role
         
         try:
             user_role = Role[role.upper()]
@@ -135,11 +140,11 @@ class SecurityDependencies:
                 detail="Rôle utilisateur invalide"
             )
     
-    async def verify_technical_access(self, current_user: Dict[str, Any]) -> bool:
+    async def verify_technical_access(self, current_user: TokenData) -> bool:
         """
         Vérifier que l'utilisateur a accès aux données techniques.
         """
-        role = current_user.get("role", "sous_traitant")
+        role = current_user.role
         
         try:
             user_role = Role[role.upper()]
@@ -158,11 +163,11 @@ class SecurityDependencies:
                 detail="Rôle utilisateur invalide"
             )
     
-    async def verify_admin_access(self, current_user: Dict[str, Any]) -> bool:
+    async def verify_admin_access(self, current_user: TokenData) -> bool:
         """
         Vérifier que l'utilisateur a accès aux fonctions d'administration.
         """
-        role = current_user.get("role", "sous_traitant")
+        role = current_user.role
         
         try:
             user_role = Role[role.upper()]
