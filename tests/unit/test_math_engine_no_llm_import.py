@@ -33,7 +33,11 @@ def test_scan_math_engine():
             for line in content.split('\n'):
                 line = line.strip()
                 if line.startswith('import ') or line.startswith('from '):
-                    if forb in line and forb not in ALLOWED:
+                    # Vérifier que le mot interdit est un module complet, pas une sous-chaîne
+                    # Exemple: "cohere" doit matcher "import cohere" mais pas "incoherence_detector"
+                    import re
+                    pattern = r'\b' + re.escape(forb) + r'\b'
+                    if re.search(pattern, line) and forb not in ALLOWED:
                         forbidden_found.append(f"{f.relative_to(project_root)}: {line}")
     
     if forbidden_found:

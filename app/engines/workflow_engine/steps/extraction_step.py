@@ -25,13 +25,12 @@ from datetime import datetime
 import re
 import logging
 
-from app.engines.agent_runtime.base_agent import BaseAgent
-from app.engines.agent_runtime.registry import agent_registry
+from app.engines.workflow_engine.steps.base_step import BaseStep
 
 logger = logging.getLogger(__name__)
 
 
-class ExtractionStep(BaseAgent):
+class ExtractionStep(BaseStep):
     """
     Étape 2 du Workflow : Extraction des données critiques du DCE
     
@@ -47,20 +46,19 @@ class ExtractionStep(BaseAgent):
     Sortie : Dict avec données structurées extraites
     """
     
-    def __init__(self):
-        super().__init__()
-        self.agent_id = "extraction_step"
-        self.version = "1.0.0"
-        self.capabilities = [
-            "deadline_extraction",
-            "penalty_extraction", 
-            "pab_detection",
-            "criteria_extraction",
-            "certification_requirements",
-            "ccap_analysis"
-        ]
+    name = "extraction_step"
+    version = "1.0.0"
+    description = "Extraction des données critiques du DCE"
+    capabilities = [
+        "deadline_extraction",
+        "penalty_extraction", 
+        "pab_detection",
+        "criteria_extraction",
+        "certification_requirements",
+        "ccap_analysis"
+    ]
     
-    async def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, mission_id: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Exécute l'extraction des données critiques
         
@@ -376,11 +374,4 @@ class ExtractionStep(BaseAgent):
                 return risk_level
         
         return "medium"
-
-
-# Enregistrement automatique dans le registry
-agent_registry.register(ExtractionStep)
-
-# Import statements will be added based on dependencies
-# Follow V7 Design Patterns and ADRs
 

@@ -24,7 +24,7 @@ from app.engines.math_engine.planning import *
 from app.engines.math_engine.resources import *
 from app.engines.math_engine.rep_cost import *
 from app.engines.math_engine.materiaux_shield import *
-from app.engines.math_engine.incoherence_solver import *
+from app.engines.math_engine.incoherence_detector import *
 from app.engines.math_engine.eplusc_calculator import *
 from app.engines.math_engine.risques_generator import *
 from app.engines.math_engine.site_coeff import *
@@ -34,7 +34,7 @@ __all__ = [
     'decimal_ops', 'types', 'chiffrage_pulp', 'margin', 'treasury',
     'worst_case', 'zan_solver', 'sous_chiffrage', 'formule_algebra_checker',
     'sourcing_api_solver', 'pab_detector', 'penibilite_solver', 'planning',
-    'resources', 'rep_cost', 'materiaux_shield', 'incoherence_solver',
+    'resources', 'rep_cost', 'materiaux_shield', 'incoherence_detector',
     'eplusc_calculator', 'risques_generator', 'site_coeff',
     # Classes principales
     'DecimalOps', 'PlanningSolver', 'ResourcesSolver', 'RepCostSolver',

@@ -32,23 +32,26 @@ class ParserStep(BaseStep):
     - Valider la complétude des pièces administratives
     """
     
+    name = "parser_step"
+    version = "1.0.0"
+    description = "Parsing des documents DCE"
     step_name = "parser"
     step_order = 1
     required_capabilities = ["document_parsing", "pdf_extraction"]
     
-    async def execute(self, mission: Mission, context: Dict[str, Any]) -> StepResult:
+    async def execute(self, mission_id: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Exécute le parsing des documents du DCE
         
         Args:
-            mission: La mission en cours de traitement
+            mission_id: ID de la mission en cours de traitement
             context: Contexte d'exécution contenant les chemins de fichiers
             
         Returns:
             StepResult avec les documents parsés ou erreur détaillée
         """
         try:
-            logger.info(f"[ParserStep] Démarrage parsing pour mission {mission.id}")
+            logger.info(f"[ParserStep] Démarrage parsing pour mission {mission_id}")
             
             # Récupérer les chemins des fichiers depuis le contexte
             files_path = context.get("files_path")

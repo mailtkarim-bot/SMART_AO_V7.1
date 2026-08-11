@@ -110,12 +110,13 @@ class RatioCalculator:
         Returns:
             RatioResult: Résultat du calcul
         """
+        seuils = RatioCalculator.SEUILS[RatioType.AUTONOMIE_FINANCIERE]
+        
         if total_bilan <= 0:
             valeur = 0.0
             statut = CapaciteStatus.INSUFFISANTE
         else:
             valeur = capitaux_propres / total_bilan
-            seuils = RatioCalculator.SEUILS[RatioType.AUTONOMIE_FINANCIERE]
             
             if valeur >= seuils["ideal"]:
                 statut = CapaciteStatus.SUFFISANTE

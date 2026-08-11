@@ -97,11 +97,11 @@ def validate_file_type(file_content: bytes, file_name: str) -> Tuple[bool, str]:
     """
     try:
         # Utiliser python-magic pour détecter le type MIME réel (si disponible)
-        if HAS_MAGIC:
-            mime = magic.from_buffer(file_content, mime=True)
-        else:
-            # Fallback: détecter à partir de l'extension
-            mime = None
+        if not HAS_MAGIC:
+            # Si magic n'est pas installé, on fait confiance à l'extension
+            return True, "Vérification du type MIME désactivée (magic non installé)"
+        
+        mime = magic.from_buffer(file_content, mime=True)
         
         # Mapper les extensions aux types MIME attendus
         allowed_mimes = {
@@ -122,9 +122,6 @@ def validate_file_type(file_content: bytes, file_name: str) -> Tuple[bool, str]:
         
         return True, f"Type MIME valide: {mime}"
     
-    except ImportError:
-        # Si magic n'est pas installé, on fait confiance à l'extension
-        return True, "Vérification du type MIME désactivée (magic non installé)"
     except Exception as e:
         return False, f"Erreur lors de la vérification du type MIME: {e}"
 

@@ -8,7 +8,7 @@ Plugin Manifest - Gestion des manifestes de plugins
 Source: ARCHITECTURE_V7_ENGINE.md §3.4
 """
 
-from typing import Dict, List, Optional, Any, Set
+from typing import Dict, List, Optional, Any, Set, Tuple
 from dataclasses import dataclass, field
 import json
 import logging

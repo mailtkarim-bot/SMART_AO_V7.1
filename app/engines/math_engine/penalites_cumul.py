@@ -247,7 +247,7 @@ class CCMICalculator:
         elif retard_jours > 10:
             niveau = NiveauPenalite.MOYEN
         else:
-            niveau = NiveauPenalite.FAIBLE if retard_jours > 0 else NiveauPenalite.NUL
+            niveau = NiveauPenalite.FAIBLE
 
         return PenaliteResult(
             type=PenaliteType.CCMI,

@@ -12,6 +12,25 @@ Build: 9 - Phase: 5
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from enum import Enum
+
+
+class StepStatus(str, Enum):
+    """Statuts possibles pour une étape du workflow."""
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
+class StepResult(BaseModel):
+    """Résultat d'une étape du workflow."""
+    status: StepStatus
+    message: Optional[str] = None
+    data: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+    step_name: Optional[str] = None
 
 
 class WorkflowStatusResponse(BaseModel):

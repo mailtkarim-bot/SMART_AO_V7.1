@@ -111,7 +111,7 @@ class EnveloppeRBAC:
         if role_value:
             # Normaliser les rôles métier V7 vers les rôles enveloppe
             role_str = str(role_value).upper()
-            if role_str in ("PATRON", "ADMIN", "SUPER_ADMIN"):
+            if role_str in ("PATRON", "ADMIN"):
                 return UserRole.ADMIN
             if role_str == "SUPER_ADMIN":
                 return UserRole.SUPER_ADMIN
